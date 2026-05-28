@@ -17,12 +17,14 @@
   const MODAL_CSS = `
     #profile-overlay {
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
-      z-index:9999; align-items:center; justify-content:center;
+      z-index:9999; align-items:flex-start; justify-content:center;
+      padding:20px 12px; overflow-y:auto;
     }
     #profile-overlay.open { display:flex; }
     #profile-modal {
       background:var(--surface); border:1px solid var(--border); border-radius:4px;
       padding:28px 28px 24px; width:100%; max-width:400px; position:relative;
+      max-height:90vh; overflow-y:auto;
     }
     #profile-modal h3 {
       font-family:var(--mono); font-size:12px; letter-spacing:.07em; text-transform:uppercase;
@@ -129,7 +131,7 @@
           <span class="pm-msg" id="pm-msg"></span>
         </div>
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
-          <a href="/download/apk" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+          <a href="/download/basket.apk" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
             letter-spacing:.05em;color:var(--text-dim);text-decoration:none;padding:6px 12px;border:1px solid var(--border2);
             border-radius:3px;transition:border-color .15s,color .15s;"
             onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
@@ -301,7 +303,7 @@
       'display:flex;align-items:center;gap:10px;padding:10px 14px;z-index:9000;font-family:var(--mono);font-size:11px;';
     bar.innerHTML =
       '<span style="flex:1;color:var(--text-dim)">Install <strong style="color:var(--text)">Basket</strong> app on Android</span>' +
-      '<a href="/download/apk" style="padding:7px 14px;background:var(--accent);color:#000;' +
+      '<a href="/download/basket.apk" style="padding:7px 14px;background:var(--accent);color:#000;' +
       'font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-decoration:none;border-radius:2px;white-space:nowrap;">' +
       '⬇ Download APK</a>' +
       '<button onclick="document.getElementById(\'install-bar\').remove();sessionStorage.setItem(\'install-dismissed\',1)" ' +

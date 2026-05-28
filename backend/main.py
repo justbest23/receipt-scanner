@@ -163,7 +163,7 @@ def startup():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/download/apk")
+@app.get("/download/basket.apk")
 def download_apk():
     from fastapi.responses import FileResponse
     return FileResponse(
