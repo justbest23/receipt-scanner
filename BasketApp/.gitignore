@@ -1,0 +1,8 @@
+node_modules/
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/
+.bundle/
+.yarn/
+android/app/.cxx/
