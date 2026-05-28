@@ -47,7 +47,7 @@ export default function RecipeDetailScreen() {
     setSaving(true);
     try {
       await api.addIngredient(params.id, {
-        name: ingName.trim(),
+        ingredient_name: ingName.trim(),
         quantity: ingQty ? parseFloat(ingQty) : undefined,
         unit: ingUnit.trim() || undefined,
       });
@@ -99,7 +99,7 @@ export default function RecipeDetailScreen() {
           <Text style={s.hint}>No ingredients yet.</Text>
         ) : ingredients.map((ing: any) => (
           <View key={ing.id} style={s.ingRow}>
-            <Text style={s.ingName}>{ing.name}</Text>
+            <Text style={s.ingName}>{ing.ingredient_name || ing.name}</Text>
             <View style={s.ingRight}>
               {(ing.quantity || ing.unit) ? (
                 <Text style={s.ingQty}>{ing.quantity ? `${ing.quantity}` : ''}{ing.unit ? ` ${ing.unit}` : ''}</Text>
@@ -107,7 +107,7 @@ export default function RecipeDetailScreen() {
               {ing.price_estimate != null && (
                 <Text style={s.ingPrice}>~R{ing.price_estimate.toFixed(2)}</Text>
               )}
-              <TouchableOpacity onPress={() => deleteIngredient(ing.id, ing.name)}>
+              <TouchableOpacity onPress={() => deleteIngredient(ing.id, ing.ingredient_name || ing.name)}>
                 <Text style={s.removeText}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -158,11 +158,11 @@ export default function RecipeDetailScreen() {
           <Text style={s.hint}>No items found.</Text>
         ) : shoppingList.map((item: any, i: number) => (
           <View key={i} style={s.shopRow}>
-            <Text style={s.shopName}>{item.name}</Text>
+            <Text style={s.shopName}>{item.ingredient || item.name}</Text>
             <View style={s.shopRight}>
               {item.quantity ? <Text style={s.shopQty}>{item.quantity}{item.unit ? ` ${item.unit}` : ''}</Text> : null}
-              {item.estimated_price != null && (
-                <Text style={s.shopPrice}>R{item.estimated_price.toFixed(2)}</Text>
+              {item.cheapest?.price != null && (
+                <Text style={s.shopPrice}>R{item.cheapest.price.toFixed(2)}</Text>
               )}
             </View>
           </View>
@@ -171,7 +171,7 @@ export default function RecipeDetailScreen() {
           <View style={s.shopTotal}>
             <Text style={s.shopTotalLabel}>Estimated Total</Text>
             <Text style={s.shopTotalValue}>
-              R{shoppingList.reduce((sum: number, i: any) => sum + (i.estimated_price || 0), 0).toFixed(2)}
+              R{shoppingList.reduce((sum: number, i: any) => sum + (i.cheapest?.price || 0), 0).toFixed(2)}
             </Text>
           </View>
         )}

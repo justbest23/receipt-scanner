@@ -39,6 +39,7 @@ export default function ScanScreen() {
   const [stage, setStage] = useState<Stage>('idle');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [useClaude, setUseClaude] = useState(true);
 
   const [store, setStore] = useState('');
   const [date, setDate] = useState('');
@@ -55,7 +56,7 @@ export default function ScanScreen() {
     setStage('scanning');
     setError('');
     try {
-      const data = await api.scan(asset.uri!, asset.type ?? 'image/jpeg', asset.fileName ?? 'receipt.jpg');
+      const data = await api.scan(asset.uri!, asset.type ?? 'image/jpeg', asset.fileName ?? 'receipt.jpg', useClaude);
       setStore(data.store || '');
       setDate(data.date || '');
       setTotal(data.total != null ? String(data.total) : '');
@@ -119,7 +120,7 @@ export default function ScanScreen() {
       <View style={[s.root, s.center]}>
         <ActivityIndicator size="large" color={COLORS.accent} />
         <Text style={s.scanningText}>Processing receipt…</Text>
-        <Text style={s.scanningSubText}>AI is extracting items</Text>
+        <Text style={s.scanningSubText}>{useClaude ? '✦ Claude AI is extracting items' : '⚙ Ollama is extracting items'}</Text>
       </View>
     );
   }
@@ -227,6 +228,19 @@ export default function ScanScreen() {
       <TouchableOpacity style={s.secondaryBtn} onPress={() => pick(false)}>
         <Text style={s.secondaryBtnText}>🖼  Choose from Gallery</Text>
       </TouchableOpacity>
+
+      <View style={s.modelToggle}>
+        <View style={s.modelToggleLeft}>
+          <Text style={s.modelLabel}>{useClaude ? '✦ Claude AI' : '⚙ Ollama (local)'}</Text>
+          <Text style={s.modelHint}>{useClaude ? 'Best accuracy' : 'Faster, runs locally'}</Text>
+        </View>
+        <Switch
+          value={useClaude}
+          onValueChange={setUseClaude}
+          trackColor={{ false: COLORS.surface2, true: COLORS.accent + '88' }}
+          thumbColor={useClaude ? COLORS.accent : COLORS.textMuted}
+        />
+      </View>
     </View>
   );
 }
@@ -291,4 +305,8 @@ const s = StyleSheet.create({
   confirmBtn: { backgroundColor: COLORS.accent, borderRadius: 4, padding: 16, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   confirmBtnText: { color: '#000', fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 },
+  modelToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 28, backgroundColor: COLORS.surface, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, padding: 12 },
+  modelToggleLeft: { flex: 1, marginRight: 12 },
+  modelLabel: { color: COLORS.text, fontFamily: 'monospace', fontSize: 12, fontWeight: 'bold', marginBottom: 2 },
+  modelHint: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 10 },
 });

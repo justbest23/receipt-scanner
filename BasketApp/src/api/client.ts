@@ -71,12 +71,13 @@ export const api = {
     request(`/receipts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   // Scan
-  scan: async (uri: string, type: string, name: string) => {
+  scan: async (uri: string, type: string, name: string, useClaude = true) => {
     const form = new FormData();
     form.append('file', { uri, type, name } as any);
     const headers: Record<string, string> = {};
     if (_token) headers['Cookie'] = `session=${_token}`;
-    const res = await fetch(`${BASE}/scan`, {
+    const endpoint = useClaude ? '/scan/claude' : '/scan';
+    const res = await fetch(`${BASE}${endpoint}`, {
       method: 'POST',
       credentials: 'include',
       headers,
