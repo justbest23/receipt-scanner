@@ -1,3 +1,11 @@
+# To use current build:
+Go to basket.trog.co.za and register
+
+
+
+# To run your own version of this app:
+Followt the below instructions.
+
 # Receipt Scanner — Backend v0.1
 
 OCR + local LLM receipt parsing, fully dockerised.
