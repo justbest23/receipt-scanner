@@ -221,8 +221,7 @@
 
     const nav = document.getElementById('user-nav');
     if (nav) {
-      // Push user-nav to the far right — fixes positioning on all pages
-      nav.style.marginLeft = 'auto';
+      nav.style.marginLeft = 'auto';   // push user-nav + theme-toggle (its next sibling) to far right
       nav.style.display    = 'flex';
       nav.style.alignItems = 'center';
       nav.style.gap        = '8px';
