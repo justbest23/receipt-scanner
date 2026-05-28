@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from './api/client';
 
-interface User { id: number; username: string; display_name: string; email: string; is_admin: boolean; }
+interface User { id: number; username: string; display_name: string; email: string; is_admin: boolean; currency: string; permissions: string[]; }
 interface AuthCtx { user: User | null; setUser: (u: User | null) => void; logout: () => Promise<void>; }
 
 const Ctx = createContext<AuthCtx>({ user: null, setUser: () => {}, logout: async () => {} });

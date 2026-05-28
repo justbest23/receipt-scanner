@@ -1,4 +1,4 @@
-const BASE = 'http://basket.trog.co.za';
+const BASE = 'https://basket.trog.co.za';
 
 async function request(path: string, opts: RequestInit = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -28,6 +28,8 @@ export const api = {
   deleteReceipt: (id: number) => request(`/receipts/${id}`, { method: 'DELETE' }),
   confirmReceipt: (data: object) =>
     request('/receipts/confirm', { method: 'POST', body: JSON.stringify(data) }),
+  updateReceipt: (id: number, data: object) =>
+    request(`/receipts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   // Scan
   scan: async (uri: string, type: string, name: string) => {
@@ -52,6 +54,53 @@ export const api = {
   },
   stores: () => request('/analytics/stores'),
 
-  // Spend groups
+  // Meals / Recipes
+  recipes: () => request('/meals/recipes'),
+  recipe: (id: number) => request(`/meals/recipes/${id}`),
+  createRecipe: (data: object) =>
+    request('/meals/recipes', { method: 'POST', body: JSON.stringify(data) }),
+  importRecipeUrl: (url: string) =>
+    request('/meals/recipes/import-url', { method: 'POST', body: JSON.stringify({ url }) }),
+  deleteRecipe: (id: number) => request(`/meals/recipes/${id}`, { method: 'DELETE' }),
+  addIngredient: (recipeId: number, data: object) =>
+    request(`/meals/recipes/${recipeId}/ingredients`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteIngredient: (ingredientId: number) =>
+    request(`/meals/ingredients/${ingredientId}`, { method: 'DELETE' }),
+  setInstructions: (recipeId: number, instructions: string) =>
+    request(`/meals/recipes/${recipeId}/instructions`, { method: 'POST', body: JSON.stringify({ instructions }) }),
+  shoppingList: (recipeIds: number[]) =>
+    request(`/meals/shopping?recipe_ids=${recipeIds.join(',')}`),
+
+  // Households
+  households: () => request('/households'),
+  household: (id: number) => request(`/households/${id}`),
+  householdAnalytics: (id: number) => request(`/households/${id}/analytics`),
+  householdHistory: (id: number, skip = 0, limit = 40) =>
+    request(`/households/${id}/history?skip=${skip}&limit=${limit}`),
+  createHousehold: (name: string) =>
+    request('/households', { method: 'POST', body: JSON.stringify({ name }) }),
+  joinHousehold: (code: string) =>
+    request('/households/join', { method: 'POST', body: JSON.stringify({ code }) }),
+  deleteHousehold: (id: number) => request(`/households/${id}`, { method: 'DELETE' }),
+  leaveHousehold: (id: number) => request(`/households/${id}/leave`, { method: 'DELETE' }),
+  generateInvite: (id: number) => request(`/households/${id}/invite`, { method: 'POST' }),
+  deleteInvite: (id: number) => request(`/households/${id}/invite`, { method: 'DELETE' }),
+  removeMember: (householdId: number, userId: number) =>
+    request(`/households/${householdId}/members/${userId}`, { method: 'DELETE' }),
+  updateMemberRole: (householdId: number, userId: number, role: string) =>
+    request(`/households/${householdId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+
+  // Spend Groups
   spendGroups: () => request('/api/spend-groups'),
+  spendGroup: (id: number) => request(`/api/spend-groups/${id}`),
+  spendGroupBalance: (id: number) => request(`/api/spend-groups/${id}/balance`),
+  createSpendGroup: (data: object) =>
+    request('/api/spend-groups', { method: 'POST', body: JSON.stringify(data) }),
+  updateSpendGroup: (id: number, data: object) =>
+    request(`/api/spend-groups/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteSpendGroup: (id: number) => request(`/api/spend-groups/${id}`, { method: 'DELETE' }),
+  addSpendMember: (groupId: number, username: string) =>
+    request(`/api/spend-groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ username }) }),
+  removeSpendMember: (groupId: number, userId: number) =>
+    request(`/api/spend-groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
 };

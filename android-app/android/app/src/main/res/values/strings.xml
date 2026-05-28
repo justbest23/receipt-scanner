@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Basket</string>
-    <string name="title_activity_main">Basket</string>
-    <string name="package_name">co.trog.basket</string>
-    <string name="custom_url_scheme">co.trog.basket</string>
-</resources>

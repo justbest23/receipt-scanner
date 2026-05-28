@@ -572,6 +572,11 @@ def update_profile(
                 raise HTTPException(400, "Password must be at least 8 characters")
             user.password_hash = auth.hash_password(pw)
 
+    if "currency" in payload:
+        cur = (payload["currency"] or "").strip().upper()
+        if cur:
+            user.currency = cur
+
     db.commit()
     db.refresh(user)
     logger.info(f"User '{user.username}' updated their profile")
@@ -583,9 +588,11 @@ def auth_me(user: models.User = Depends(auth.get_current_user)):
     return {
         "id":           user.id,
         "username":     user.username,
+        "email":        user.email,
         "display_name": user.display_name,
         "is_admin":     user.is_admin,
         "permissions":  user.permissions or [],
+        "currency":     user.currency or "ZAR",
     }
 
 
