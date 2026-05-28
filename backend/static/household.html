@@ -101,10 +101,10 @@
     .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-decoration: none; color: var(--text); }
     .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
     .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
-    nav { display: flex; gap: 2px; margin-right: auto; margin-left: 24px; }
+    nav { display: flex; gap: 2px; margin-left: 24px; }
     .nav-link { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; }
     .nav-link.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-    #user-nav { display: flex; align-items: center; margin-left: 16px; }
+    #user-nav { display: flex; align-items: center; margin-left: auto; flex-shrink: 0; }
 
     /* ── Layout ── */
     .workspace { display: flex; height: calc(100vh - 52px); }
@@ -119,7 +119,7 @@
       padding: 10px 16px; border-bottom: 1px solid var(--border);
       font-family: var(--mono); font-size: 10px; letter-spacing: .07em;
       text-transform: uppercase; color: var(--text-dim);
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center;
       flex-shrink: 0;
     }
     .hh-list { flex: 1; overflow-y: auto; }
@@ -178,7 +178,7 @@
     /* Household header */
     .hh-header {
       padding: 20px 28px 16px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      display: flex; align-items: flex-start; gap: 16px;
     }
     .hh-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
     .hh-subtitle { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
@@ -308,7 +308,7 @@
     <a class="nav-link active" href="/household">Household</a>
     <a class="nav-link" href="/spend-groups">Spend</a>
   </nav>
-  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:auto;flex-shrink:0;"></div>
   <div class="theme-toggle">
     <button class="theme-btn" data-t="dark"  onclick="setTheme('dark')">DARK</button>
     <button class="theme-btn" data-t="light" onclick="setTheme('light')">LIGHT</button>

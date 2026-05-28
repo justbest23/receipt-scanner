@@ -141,15 +141,17 @@
   };
 
   window.__pmOpen = function(user) {
+    if (!user) return;
+    const overlay = document.getElementById('profile-overlay');
+    if (!overlay) { console.warn('[auth] profile-overlay not in DOM'); return; }
     document.getElementById('pm-display').value  = user.display_name || '';
     document.getElementById('pm-username').value = user.username || '';
     document.getElementById('pm-email').value    = user.email || '';
     document.getElementById('pm-pw1').value      = '';
     document.getElementById('pm-pw2').value      = '';
-    const msg = document.getElementById('pm-msg');
-    msg.style.display = 'none';
+    document.getElementById('pm-msg').style.display = 'none';
     document.getElementById('pm-save').disabled = false;
-    document.getElementById('profile-overlay').classList.add('open');
+    overlay.classList.add('open');
     document.getElementById('pm-display').focus();
   };
 
@@ -221,20 +223,32 @@
 
     const nav = document.getElementById('user-nav');
     if (nav) {
-      nav.style.marginLeft = 'auto';   // push user-nav + theme-toggle (its next sibling) to far right
       nav.style.display    = 'flex';
       nav.style.alignItems = 'center';
       nav.style.gap        = '8px';
-      nav.style.flexShrink = '0';
 
-      nav.innerHTML =
-        '<button id="user-nav-btn" onclick="window.__pmOpen(window.__authUser)" title="Edit profile">' +
-        escHtml(user.display_name || user.username) + '</button>' +
-        '<button onclick="window.__authLogout()" style="padding:4px 10px;font-family:var(--mono);' +
-        'font-size:10px;letter-spacing:.05em;background:transparent;border:1px solid var(--border2);' +
-        'color:var(--text-dim);cursor:pointer;border-radius:2px;white-space:nowrap;transition:border-color .15s,color .15s;" ' +
-        'onmouseenter="this.style.borderColor=\'var(--red)\';this.style.color=\'var(--red)\'" ' +
-        'onmouseleave="this.style.borderColor=\'\';this.style.color=\'\'">LOGOUT</button>';
+      const userBtn = document.createElement('button');
+      userBtn.id = 'user-nav-btn';
+      userBtn.title = 'Edit profile';
+      userBtn.textContent = user.display_name || user.username;
+      userBtn.addEventListener('click', function() { window.__pmOpen(window.__authUser); });
+
+      const logoutBtn = document.createElement('button');
+      logoutBtn.textContent = 'LOGOUT';
+      logoutBtn.style.cssText = 'padding:4px 10px;font-family:var(--mono);font-size:10px;' +
+        'letter-spacing:.05em;background:transparent;border:1px solid var(--border2);' +
+        'color:var(--text-dim);cursor:pointer;border-radius:2px;white-space:nowrap;' +
+        'transition:border-color .15s,color .15s;';
+      logoutBtn.addEventListener('mouseenter', function() {
+        this.style.borderColor = 'var(--red)'; this.style.color = 'var(--red)';
+      });
+      logoutBtn.addEventListener('mouseleave', function() {
+        this.style.borderColor = ''; this.style.color = '';
+      });
+      logoutBtn.addEventListener('click', function() { window.__authLogout(); });
+
+      nav.appendChild(userBtn);
+      nav.appendChild(logoutBtn);
     }
 
     if (user.is_admin) {

@@ -95,7 +95,7 @@
 
     /* ── Header ── */
     header {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center;
       padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
       height: 52px; flex-shrink: 0;
     }
@@ -230,7 +230,7 @@
 
     .items-editor { padding: 14px 16px; }
     .items-editor-header {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center;
       margin-bottom: 10px;
     }
     .items-editor-title { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
@@ -293,7 +293,7 @@
       margin: 0 16px 16px; padding: 12px 14px;
       border: 1px solid var(--border); border-radius: 3px; background: var(--surface2);
     }
-    .tot-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .tot-row { display: flex; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
     .tot-row:last-child { border-bottom: none; }
     .tot-label { color: var(--text-dim); }
     .tot-row.grand { font-weight: 600; font-size: 15px; }
@@ -325,7 +325,7 @@
     <span class="logo-name">BASKET</span>
     <span class="logo-ver">v0.4</span>
   </a>
-  <nav style="display:flex;gap:2px;margin-right:auto">
+  <nav style="display:flex;gap:2px;margin-left:24px">
     <a href="/"          style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--accent);background:rgba(249,115,22,.08);border-radius:2px">Receipts</a>
     <a href="/history"   style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">History</a>
     <a href="/prices"    style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">Prices <span style="font-size:8px;opacity:.6">(WIP)</span></a>
@@ -339,7 +339,7 @@
     <div class="hp"><div class="hd" id="hd-db"></div><span>DB</span></div>
     <div class="hp"><div class="hd" id="hd-llm"></div><span id="hd-llm-lbl">LLM</span></div>
   </div>
-  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:auto;flex-shrink:0;"></div>
   <div class="theme-toggle">
     <button class="theme-btn" data-t="dark"  onclick="setTheme('dark')">DARK</button>
     <button class="theme-btn" data-t="light" onclick="setTheme('light')">LIGHT</button>
