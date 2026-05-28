@@ -231,7 +231,11 @@
       userBtn.id = 'user-nav-btn';
       userBtn.title = 'Edit profile';
       userBtn.textContent = user.display_name || user.username;
-      userBtn.addEventListener('click', function() { window.__pmOpen(window.__authUser); });
+      userBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!document.getElementById('profile-overlay')) injectModal();
+        window.__pmOpen(window.__authUser);
+      });
 
       const logoutBtn = document.createElement('button');
       logoutBtn.textContent = 'LOGOUT';
@@ -274,6 +278,26 @@
     await _fetch('/auth/logout', { method: 'POST' });
     window.location.href = LOGIN;
   };
+
+  function injectInstallBanner() {
+    // Only show on mobile and only once per session
+    if (window.innerWidth > 900) return;
+    if (sessionStorage.getItem('install-dismissed')) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'install-bar';
+    bar.style.cssText =
+      'position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);' +
+      'display:flex;align-items:center;gap:10px;padding:10px 14px;z-index:9000;font-family:var(--mono);font-size:11px;';
+    bar.innerHTML =
+      '<span style="flex:1;color:var(--text-dim)">Install <strong style="color:var(--text)">Basket</strong> app on Android</span>' +
+      '<a href="/static/basket.apk" download="basket.apk" style="padding:7px 14px;background:var(--accent);color:#000;' +
+      'font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-decoration:none;border-radius:2px;white-space:nowrap;">' +
+      '⬇ Download APK</a>' +
+      '<button onclick="document.getElementById(\'install-bar\').remove();sessionStorage.setItem(\'install-dismissed\',1)" ' +
+      'style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;line-height:1;">×</button>';
+    document.body.appendChild(bar);
+  }
 
   function setupMobileNav() {
     const headerEl = document.querySelector('header');
@@ -321,5 +345,6 @@
     injectModal();
     setupMobileNav();
     initAuth();
+    injectInstallBanner();
   });
 })();

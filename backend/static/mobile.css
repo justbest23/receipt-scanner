@@ -3,6 +3,14 @@
    Included on all pages after the page's own <style> block.
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* ── Profile modal — guaranteed styles regardless of JS injection order ── */
+#profile-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); z-index: 9999;
+  align-items: center; justify-content: center;
+}
+#profile-overlay.open { display: flex !important; }
+
 /* ── Hamburger button (injected by auth.js, hidden on desktop) ── */
 #mob-nav-btn {
   display: none;
