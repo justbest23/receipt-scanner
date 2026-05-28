@@ -30,6 +30,7 @@ def _migrate():
         ("receipt_items", "category",      "VARCHAR"),
         ("receipt_items", "weight_kg",     "FLOAT"),
         ("receipt_items", "per_kg_price",  "FLOAT"),
+        ("receipt_items", "canonical_name","VARCHAR"),
         ("recipes",       "instructions",  "TEXT"),
         ("recipes",       "source_url",    "VARCHAR"),
         ("recipes",       "user_id",       "INTEGER REFERENCES users(id)"),

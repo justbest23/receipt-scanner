@@ -243,6 +243,9 @@ export default function ReceiptDetailScreen() {
             <View key={item.id ?? idx} style={s.item}>
               <View style={s.itemMain}>
                 <Text style={s.itemName} numberOfLines={2}>{item.name}</Text>
+                {(item as any).canonical_name && (item as any).canonical_name !== item.name && (
+                  <Text style={s.canonicalTag}>{(item as any).canonical_name}</Text>
+                )}
                 {parseFloat(item.quantity) !== 1 && (
                   <Text style={s.itemQty}>×{item.quantity}</Text>
                 )}
@@ -317,6 +320,7 @@ const s = StyleSheet.create({
   item: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 10 },
   itemMain: { flex: 1, marginRight: 8 },
   itemName: { color: COLORS.text, fontSize: 13 },
+  canonicalTag: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 9, marginTop: 1 },
   itemQty: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 10, marginTop: 2 },
   itemRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   zeroTag: { backgroundColor: COLORS.surface2, color: COLORS.green, fontFamily: 'monospace', fontSize: 9, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 2 },

@@ -89,6 +89,7 @@ class ReceiptItem(Base):
     receipt_id     = Column(Integer, ForeignKey("receipts.id"), nullable=False)
     receipt_name   = Column(String, nullable=True)   # raw text from receipt
     name           = Column(String, nullable=False)  # decoded display name
+    canonical_name = Column(String, nullable=True)   # generic ingredient (no brand/size)
     category       = Column(String, nullable=True)
     quantity       = Column(Float, default=1.0)
     unit_type      = Column(String, default="unit")  # unit | weight_kg | weight_g

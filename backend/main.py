@@ -46,6 +46,7 @@ from pipeline import run_pipeline, check_ollama_health
 from claude_pipeline import run_claude_pipeline
 from vendor import list_vendors
 import scraper_service
+from normalizer import normalize_names
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s  %(message)s")
 logger = logging.getLogger("main")
@@ -831,6 +832,9 @@ def confirm_receipt(
     try:
         receipt_id = database.save_receipt(db, payload, user_id=user.id)
         logger.info(f"Confirmed and saved receipt #{receipt_id} for user #{user.id}")
+        # Normalize item names in the background (non-blocking)
+        import threading
+        threading.Thread(target=_normalize_receipt_items, args=(receipt_id,), daemon=True).start()
         return {"receipt_id": receipt_id, "status": "saved"}
     except Exception as e:
         logger.error(f"Confirm save failed: {e}", exc_info=True)
@@ -925,6 +929,9 @@ def update_receipt(
     db.commit()
     db.refresh(r)
     logger.info(f"Updated receipt #{r.id}")
+    if "items" in payload:
+        import threading
+        threading.Thread(target=_normalize_receipt_items, args=(r.id,), daemon=True).start()
     return _detail(r)
 
 
@@ -1023,6 +1030,85 @@ def price_history(
         .all()
     )
     return [scraper_service._to_dict(l) for l in listings]
+
+
+@app.get("/prices/receipt-history")
+def receipt_price_history(
+    ingredient: str = Query(..., min_length=2),
+    user: models.User = Depends(auth.require_permission("history")),
+    db: Session = Depends(database.get_db),
+):
+    """
+    Find prices for a canonical ingredient from the user's own receipt history.
+    Returns each match with store, date, unit_price, and a stale flag if >90 days old.
+    """
+    cutoff_stale = datetime.now(timezone.utc) - timedelta(days=90)
+    q = ingredient.strip().lower()
+
+    rows = (
+        db.query(models.ReceiptItem, models.Receipt)
+        .join(models.Receipt, models.ReceiptItem.receipt_id == models.Receipt.id)
+        .filter(
+            models.Receipt.user_id == user.id,
+            models.ReceiptItem.canonical_name.isnot(None),
+            models.ReceiptItem.canonical_name.ilike(f"%{q}%"),
+            models.ReceiptItem.total_price.isnot(None),
+        )
+        .order_by(models.Receipt.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    results = []
+    for item, receipt in rows:
+        qty = item.quantity or 1
+        unit_price = round(item.total_price / qty, 2) if item.total_price else item.unit_price
+        stale = receipt.created_at is None or receipt.created_at.replace(tzinfo=timezone.utc) < cutoff_stale
+        results.append({
+            "canonical_name": item.canonical_name,
+            "display_name":   item.name,
+            "store":          receipt.store_name,
+            "date":           receipt.receipt_date or (receipt.created_at.strftime("%Y-%m-%d") if receipt.created_at else None),
+            "unit_price":     unit_price,
+            "total_price":    item.total_price,
+            "quantity":       qty,
+            "currency":       receipt.currency or "ZAR",
+            "stale":          stale,
+            "receipt_id":     receipt.id,
+        })
+    return results
+
+
+@app.post("/admin/normalize-items")
+def admin_normalize_items(
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    """Backfill canonical_name for all existing receipt items that don't have one yet."""
+    items = (
+        db.query(models.ReceiptItem)
+        .filter(models.ReceiptItem.canonical_name.is_(None))
+        .all()
+    )
+    if not items:
+        return {"normalized": 0, "message": "All items already normalized"}
+
+    # Group by unique names to minimize Claude calls
+    unique_names = list({i.name for i in items})
+    logger.info(f"Backfill: normalizing {len(unique_names)} unique names across {len(items)} items")
+
+    # Process in batches of 100
+    mapping: dict[str, str] = {}
+    BATCH = 100
+    for i in range(0, len(unique_names), BATCH):
+        batch = unique_names[i:i + BATCH]
+        mapping.update(normalize_names(batch))
+
+    for item in items:
+        item.canonical_name = mapping.get(item.name) or item.name
+    db.commit()
+    logger.info(f"Backfill complete: {len(items)} items normalized")
+    return {"normalized": len(items), "unique_names": len(unique_names)}
 
 
 @app.post("/prices/uitkyk/import")
@@ -1240,8 +1326,11 @@ def shopping_list(
     db: Session = Depends(database.get_db),
 ):
     """
-    Generate a shopping list for the given recipe IDs (comma-separated).
-    Returns each ingredient with the cheapest store option from the DB.
+    Generate a shopping list for the given recipe IDs.
+    Prices come from two sources (best wins):
+      1. User's own receipt history (by canonical_name match)
+      2. Scraped store listings
+    Prices older than 90 days are flagged as stale.
     """
     ids = [int(x) for x in recipe_ids.split(",") if x.strip().isdigit()]
     if not ids:
@@ -1251,6 +1340,8 @@ def shopping_list(
     if not recipes:
         raise HTTPException(404, "No recipes found for given IDs")
 
+    stale_cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+
     # Collect all ingredients
     ingredients = []
     for recipe in recipes:
@@ -1259,18 +1350,51 @@ def shopping_list(
                 "recipe_id":   recipe.id,
                 "recipe_name": recipe.name,
                 "ingredient":  ing.ingredient_name,
-                "quantity":    ing.quantity,
+                "quantity":    ing.quantity or 1,
                 "unit":        ing.unit,
             })
 
-    # For each unique ingredient, find cheapest price in DB
     result_items = []
     for ing in ingredients:
-        query = ing["ingredient"]
-        best_listings = (
+        query = ing["ingredient"].strip().lower()
+
+        # --- Source 1: receipt history (canonical_name match) ---
+        receipt_rows = (
+            db.query(models.ReceiptItem, models.Receipt)
+            .join(models.Receipt, models.ReceiptItem.receipt_id == models.Receipt.id)
+            .filter(
+                models.Receipt.user_id == user.id,
+                models.ReceiptItem.canonical_name.isnot(None),
+                models.ReceiptItem.canonical_name.ilike(f"%{query}%"),
+                models.ReceiptItem.total_price.isnot(None),
+            )
+            .order_by(models.Receipt.created_at.desc())
+            .limit(20)
+            .all()
+        )
+
+        receipt_prices: dict[str, dict] = {}
+        for r_item, receipt in receipt_rows:
+            store = receipt.store_name or "Unknown"
+            qty = r_item.quantity or 1
+            up = round(r_item.total_price / qty, 2)
+            stale = (receipt.created_at is None or
+                     receipt.created_at.replace(tzinfo=timezone.utc) < stale_cutoff)
+            if store not in receipt_prices or up < receipt_prices[store]["price"]:
+                receipt_prices[store] = {
+                    "store":    store,
+                    "price":    up,
+                    "date":     receipt.receipt_date or (receipt.created_at.strftime("%Y-%m-%d") if receipt.created_at else None),
+                    "stale":    stale,
+                    "source":   "receipt",
+                    "canonical_name": r_item.canonical_name,
+                }
+
+        # --- Source 2: scraped store listings ---
+        scraped_rows = (
             db.query(models.StoreListing)
             .filter(
-                models.StoreListing.search_query.ilike(f"%{query.lower()}%"),
+                models.StoreListing.search_query.ilike(f"%{query}%"),
                 models.StoreListing.price.isnot(None),
             )
             .order_by(models.StoreListing.price)
@@ -1278,35 +1402,43 @@ def shopping_list(
             .all()
         )
 
-        prices_by_store = {}
-        for l in best_listings:
+        scraped_prices: dict[str, dict] = {}
+        for l in scraped_rows:
             s = l.store
-            if s not in prices_by_store:
-                prices_by_store[s] = scraper_service._to_dict(l)
+            if s not in scraped_prices:
+                d = scraper_service._to_dict(l)
+                d["source"] = "scraped"
+                d["stale"] = False
+                scraped_prices[s] = d
 
-        cheapest = min(
-            prices_by_store.values(),
-            key=lambda x: x.get("price_per_kg") or x.get("price") or float("inf"),
-            default=None,
-        )
+        # Merge: prefer receipt prices; scraped fills gaps
+        all_prices = {**scraped_prices, **receipt_prices}
+
+        cheapest = None
+        if all_prices:
+            cheapest = min(
+                all_prices.values(),
+                key=lambda x: x.get("price") or float("inf"),
+            )
 
         result_items.append({
             **ing,
-            "prices_by_store": prices_by_store,
-            "cheapest":        cheapest,
+            "receipt_prices": list(receipt_prices.values()),
+            "scraped_prices": list(scraped_prices.values()),
+            "cheapest":       cheapest,
         })
 
-    # Aggregate total cost per store (if you buy everything from one store)
-    store_totals: dict[str, float] = {}
-    for item in result_items:
-        for store, listing in item["prices_by_store"].items():
-            p = listing.get("price_per_kg") or listing.get("price") or 0
-            store_totals[store] = store_totals.get(store, 0) + p * item["quantity"]
+    # Estimated total using cheapest price per ingredient
+    estimated_total = sum(
+        (item["cheapest"]["price"] or 0) * item["quantity"]
+        for item in result_items
+        if item["cheapest"] and item["cheapest"].get("price")
+    )
 
     return {
-        "recipes":      [{"id": r.id, "name": r.name} for r in recipes],
-        "items":        result_items,
-        "store_totals": dict(sorted(store_totals.items(), key=lambda x: x[1])),
+        "recipes":         [{"id": r.id, "name": r.name} for r in recipes],
+        "items":           result_items,
+        "estimated_total": round(estimated_total, 2),
     }
 
 
@@ -2228,6 +2360,25 @@ def _ingredient_dict(i: models.RecipeIngredient) -> dict:
 
 
 # ── Serialisation ─────────────────────────────────────────────────────────────
+def _normalize_receipt_items(receipt_id: int):
+    """Background task: call Claude Haiku to fill canonical_name for all items on a receipt."""
+    db = database.SessionLocal()
+    try:
+        items = db.query(models.ReceiptItem).filter(models.ReceiptItem.receipt_id == receipt_id).all()
+        if not items:
+            return
+        names = [i.name for i in items]
+        mapping = normalize_names(names)
+        for item in items:
+            item.canonical_name = mapping.get(item.name) or item.name
+        db.commit()
+        logger.info(f"Normalized {len(items)} items for receipt #{receipt_id}")
+    except Exception as e:
+        logger.error(f"Normalization failed for receipt #{receipt_id}: {e}")
+    finally:
+        db.close()
+
+
 def _user_dict(u: models.User) -> dict:
     return {
         "id":             u.id,
@@ -2275,6 +2426,7 @@ def _detail(r):
                 "id":             i.id,
                 "receipt_name":   i.receipt_name,
                 "name":           i.name,
+                "canonical_name": i.canonical_name,
                 "category":       i.category,
                 "quantity":       i.quantity,
                 "unit_type":      i.unit_type,

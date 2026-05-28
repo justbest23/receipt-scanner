@@ -12,6 +12,7 @@ export default function RecipeDetailScreen() {
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [shoppingList, setShoppingList] = useState<any[] | null>(null);
+  const [shoppingListTotal, setShoppingListTotal] = useState<number | null>(null);
   const [shoppingLoading, setShoppingLoading] = useState(false);
   const [editingInstructions, setEditingInstructions] = useState(false);
   const [instructions, setInstructions] = useState('');
@@ -73,6 +74,7 @@ export default function RecipeDetailScreen() {
     try {
       const data = await api.shoppingList([params.id]);
       setShoppingList(data.items || []);
+      setShoppingListTotal(data.estimated_total ?? null);
     } catch (e: any) { Alert.alert('Error', e.message); }
     finally { setShoppingLoading(false); }
   };
@@ -153,25 +155,38 @@ export default function RecipeDetailScreen() {
           </TouchableOpacity>
         </View>
         {shoppingList === null ? (
-          <Text style={s.hint}>Tap Generate to build a shopping list with price estimates.</Text>
+          <Text style={s.hint}>Tap Generate to build a shopping list.{'\n'}Prices are sourced from your receipt history.</Text>
         ) : shoppingList.length === 0 ? (
           <Text style={s.hint}>No items found.</Text>
-        ) : shoppingList.map((item: any, i: number) => (
-          <View key={i} style={s.shopRow}>
-            <Text style={s.shopName}>{item.ingredient || item.name}</Text>
-            <View style={s.shopRight}>
-              {item.quantity ? <Text style={s.shopQty}>{item.quantity}{item.unit ? ` ${item.unit}` : ''}</Text> : null}
-              {item.cheapest?.price != null && (
-                <Text style={s.shopPrice}>R{item.cheapest.price.toFixed(2)}</Text>
-              )}
+        ) : shoppingList.map((item: any, i: number) => {
+          const best = item.cheapest;
+          return (
+            <View key={i} style={s.shopRow}>
+              <View style={s.shopLeft}>
+                <Text style={s.shopName}>{item.ingredient}</Text>
+                {item.quantity ? (
+                  <Text style={s.shopQty}>{item.quantity}{item.unit ? ` ${item.unit}` : ''}</Text>
+                ) : null}
+                {best && (
+                  <View style={s.shopMeta}>
+                    <Text style={s.shopStore}>{best.store}</Text>
+                    {best.date ? <Text style={s.shopDate}>{best.date}</Text> : null}
+                    {best.stale && <Text style={s.staleTag}>⚠ 90d+</Text>}
+                    <Text style={s.shopSource}>{best.source === 'receipt' ? '🧾' : '🔍'}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[s.shopPrice, best?.stale && s.shopPriceStale]}>
+                {best?.price != null ? `R ${best.price.toFixed(2)}` : '—'}
+              </Text>
             </View>
-          </View>
-        ))}
+          );
+        })}
         {shoppingList && shoppingList.length > 0 && (
           <View style={s.shopTotal}>
             <Text style={s.shopTotalLabel}>Estimated Total</Text>
             <Text style={s.shopTotalValue}>
-              R{shoppingList.reduce((sum: number, i: any) => sum + (i.cheapest?.price || 0), 0).toFixed(2)}
+              R {(shoppingListTotal || 0).toFixed(2)}
             </Text>
           </View>
         )}
@@ -233,11 +248,18 @@ const s = StyleSheet.create({
   instructionsText: { color: COLORS.text, fontSize: 13, lineHeight: 22 },
   saveBtn: { backgroundColor: COLORS.accent, borderRadius: 3, padding: 11, alignItems: 'center' },
   saveBtnText: { color: '#000', fontFamily: 'monospace', fontSize: 11, fontWeight: 'bold' },
-  shopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  shopName: { color: COLORS.text, fontSize: 13, flex: 1 },
+  shopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  shopLeft: { flex: 1, marginRight: 8 },
+  shopName: { color: COLORS.text, fontSize: 13, marginBottom: 2 },
+  shopQty: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 10, marginBottom: 2 },
+  shopMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
+  shopStore: { color: COLORS.textDim, fontFamily: 'monospace', fontSize: 9 },
+  shopDate: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 9 },
+  shopSource: { fontSize: 10 },
+  staleTag: { color: COLORS.red, fontFamily: 'monospace', fontSize: 9, backgroundColor: COLORS.surface2, paddingHorizontal: 3, borderRadius: 2 },
+  shopPrice: { color: COLORS.accent, fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold', marginTop: 2 },
+  shopPriceStale: { color: COLORS.textMuted },
   shopRight: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  shopQty: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 10 },
-  shopPrice: { color: COLORS.accent, fontFamily: 'monospace', fontSize: 11 },
   shopTotal: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 4 },
   shopTotalLabel: { color: COLORS.textDim, fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase' },
   shopTotalValue: { color: COLORS.accent, fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' },
