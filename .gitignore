@@ -22,3 +22,4 @@ backend/uploads/
 *.jpg
 *.png
 *.csv
+backend/static/basket.apk
