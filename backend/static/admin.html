@@ -211,6 +211,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('users')">Users</button>
     <button class="tab-btn" id="reg-tab-btn" onclick="switchTab('registrations')">Registrations <span id="pending-badge" style="display:none;background:rgba(249,115,22,.15);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px;"></span></button>
+    <button class="tab-btn" onclick="switchTab('receipts')">Assign Receipts</button>
   </div>
 
   <div class="tab-pane active" id="tab-users">
@@ -303,6 +304,52 @@
 
 </div>
 
+  <div class="tab-pane" id="tab-receipts">
+    <h2>Assign Receipts to User</h2>
+
+    <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+      <div class="form-row" style="margin:0">
+        <label>Show receipts from</label>
+        <select id="ra-from-user" onchange="loadAdminReceipts()" style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:12px;min-width:180px;">
+          <option value="">All users</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin:0">
+        <label>Reassign selected to</label>
+        <select id="ra-to-user" style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:12px;min-width:180px;">
+          <option value="">— pick a user —</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="doReassign()" style="margin-bottom:14px;">Reassign Selected</button>
+      <span id="ra-msg" class="form-msg" style="display:none;margin-bottom:14px;"></span>
+    </div>
+
+    <div style="margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text-dim);margin:0;">
+        <input type="checkbox" id="ra-select-all" onchange="toggleSelectAll(this.checked)" style="accent-color:var(--accent);">
+        Select all visible
+      </label>
+      <span id="ra-count" style="font-family:var(--mono);font-size:11px;color:var(--text-muted);"></span>
+    </div>
+
+    <table class="user-table" id="ra-table">
+      <thead>
+        <tr>
+          <th style="width:32px;"></th>
+          <th>Date</th>
+          <th>Store</th>
+          <th>Total</th>
+          <th>Items</th>
+          <th>Owner</th>
+          <th>Scanned</th>
+        </tr>
+      </thead>
+      <tbody id="ra-tbody">
+        <tr><td colspan="7" style="color:var(--text-muted);font-size:12px;padding:20px 12px;">Choose a user above to load their receipts.</td></tr>
+      </tbody>
+    </table>
+  </div><!-- /tab-receipts -->
+
 <!-- Deny reason modal -->
 <div class="modal-overlay" id="deny-modal">
   <div class="modal">
@@ -368,6 +415,7 @@
     if (!res.ok) return;
     users = await res.json();
     renderTable();
+    populateUserSelects();
   }
 
   function renderTable() {
@@ -562,6 +610,7 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     event.currentTarget.classList.add('active');
+    if (tab === 'receipts') { populateUserSelects(); loadAdminReceipts(); }
   }
 
   // ── Registrations ─────────────────────────────────────────────────────────
@@ -662,6 +711,95 @@
   document.getElementById('deny-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeDenyModal();
   });
+
+  // ── Receipt reassignment ──────────────────────────────────────────────────
+  let raReceipts = [];
+
+  function populateUserSelects() {
+    const frm = document.getElementById('ra-from-user');
+    const to  = document.getElementById('ra-to-user');
+    // preserve selections
+    const fromVal = frm.value, toVal = to.value;
+    [frm, to].forEach((sel, i) => {
+      while (sel.options.length > 1) sel.remove(1);
+      users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
+        sel.appendChild(opt);
+      });
+    });
+    frm.value = fromVal;
+    to.value  = toVal;
+  }
+
+  async function loadAdminReceipts() {
+    const uid = document.getElementById('ra-from-user').value;
+    const url = '/admin/receipts' + (uid ? `?user_id=${uid}` : '');
+    const res = await fetch(url);
+    if (!res.ok) return;
+    raReceipts = await res.json();
+    renderAdminReceipts();
+  }
+
+  function renderAdminReceipts() {
+    const tbody = document.getElementById('ra-tbody');
+    document.getElementById('ra-select-all').checked = false;
+    document.getElementById('ra-count').textContent = `${raReceipts.length} receipt${raReceipts.length !== 1 ? 's' : ''}`;
+    if (!raReceipts.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);font-size:12px;padding:20px 12px;">No receipts found.</td></tr>';
+      return;
+    }
+    const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
+    tbody.innerHTML = raReceipts.map(r => `
+      <tr>
+        <td><input type="checkbox" class="ra-cb" data-id="${r.id}" style="accent-color:var(--accent);" onchange="updateSelectionCount()"></td>
+        <td style="font-family:var(--mono);font-size:11px;">${r.date || '—'}</td>
+        <td style="font-size:13px;">${esc(r.store || '—')}</td>
+        <td style="font-family:var(--mono);font-size:12px;">${r.currency || 'R'} ${r.total != null ? Number(r.total).toFixed(2) : '—'}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">${r.items}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">${esc(userMap[r.user_id] || '—')}</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+      </tr>`).join('');
+  }
+
+  function toggleSelectAll(checked) {
+    document.querySelectorAll('.ra-cb').forEach(cb => cb.checked = checked);
+    updateSelectionCount();
+  }
+
+  function updateSelectionCount() {
+    const n = document.querySelectorAll('.ra-cb:checked').length;
+    document.getElementById('ra-count').textContent =
+      `${n} selected of ${raReceipts.length}`;
+  }
+
+  async function doReassign() {
+    const ids = [...document.querySelectorAll('.ra-cb:checked')].map(cb => Number(cb.dataset.id));
+    const toUserId = document.getElementById('ra-to-user').value;
+    const msgEl = document.getElementById('ra-msg');
+    msgEl.style.display = 'none';
+
+    if (!ids.length) { msgEl.className = 'form-msg err'; msgEl.textContent = 'Select at least one receipt.'; msgEl.style.display = ''; return; }
+    if (!toUserId)   { msgEl.className = 'form-msg err'; msgEl.textContent = 'Choose a target user.';         msgEl.style.display = ''; return; }
+
+    const res = await fetch('/admin/receipts/reassign', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ receipt_ids: ids, to_user_id: Number(toUserId) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      msgEl.className = 'form-msg ok';
+      msgEl.textContent = `${data.reassigned} receipt(s) assigned to ${data.to_user}.`;
+      msgEl.style.display = '';
+      loadAdminReceipts();
+    } else {
+      msgEl.className = 'form-msg err';
+      msgEl.textContent = data.detail || 'Reassignment failed.';
+      msgEl.style.display = '';
+    }
+  }
 </script>
 </body>
 </html>

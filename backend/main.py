@@ -349,6 +349,55 @@ def verify_email(token: str, db: Session = Depends(database.get_db)):
     return HTMLResponse(_page("Email Verified", "<p>Your email address is confirmed. Your registration is now pending admin approval — you'll be able to sign in once it's approved.</p><p><a href='/login'>Back to sign in</a></p>"))
 
 
+@app.get("/admin/receipts")
+def admin_list_receipts(
+    user_id: Optional[int] = Query(default=None),
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    q = db.query(models.Receipt).order_by(models.Receipt.created_at.desc())
+    if user_id is not None:
+        q = q.filter(models.Receipt.user_id == user_id)
+    return [
+        {
+            "id":       r.id,
+            "user_id":  r.user_id,
+            "store":    r.store_name,
+            "date":     r.receipt_date,
+            "total":    r.total,
+            "currency": r.currency,
+            "items":    len(r.items),
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in q.limit(500).all()
+    ]
+
+
+@app.post("/admin/receipts/reassign")
+def admin_reassign_receipts(
+    payload: dict,
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    receipt_ids = [int(i) for i in (payload.get("receipt_ids") or [])]
+    to_user_id  = payload.get("to_user_id")
+    if not receipt_ids:
+        raise HTTPException(400, "receipt_ids is required")
+    if to_user_id is None:
+        raise HTTPException(400, "to_user_id is required")
+
+    target = db.query(models.User).filter(models.User.id == int(to_user_id), models.User.is_active == True).first()  # noqa: E712
+    if not target:
+        raise HTTPException(404, "Target user not found or inactive")
+
+    updated = db.query(models.Receipt).filter(models.Receipt.id.in_(receipt_ids)).update(
+        {"user_id": target.id}, synchronize_session=False
+    )
+    db.commit()
+    logger.info(f"Admin '{admin.username}' reassigned {updated} receipt(s) to user '{target.username}'")
+    return {"reassigned": updated, "to_user": target.username}
+
+
 @app.get("/admin/registrations")
 def admin_list_registrations(
     admin: models.User = Depends(auth.require_admin),
