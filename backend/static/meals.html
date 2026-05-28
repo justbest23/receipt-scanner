@@ -240,6 +240,28 @@
     /* ── Panel 2 empty state ── */
     .editor-empty { padding: 60px 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 2; }
 
+    /* ── Prices tab (inline in editor panel) ── */
+    .prices-loading { padding: 32px 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+    .price-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px; border-bottom: 1px solid var(--border);
+    }
+    .price-row:hover { background: var(--surface2); }
+    .pr-name { flex: 1; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pr-qty  { font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .pr-store { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; }
+    .pr-price { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--green); flex-shrink: 0; width: 64px; text-align: right; }
+    .pr-none  { font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .prices-total {
+      padding: 14px 16px; border-top: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0; display: none;
+    }
+    .pt-hdr { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px; }
+    .pt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .pt-store  { flex: 1; font-family: var(--mono); font-size: 11px; }
+    .pt-amount { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+    .pt-best   { color: var(--green); }
+
     /* ── Panel 3: Shopping list ── */
     .shopping-empty { padding: 40px 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); line-height: 2; }
     .shopping-item { padding: 10px 16px; border-bottom: 1px solid var(--border); }
@@ -279,7 +301,7 @@
     .theme-toggle {
       display: flex; align-items: center;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 3px; overflow: hidden; margin-left: 12px; flex-shrink: 0;
+      border-radius: 3px; overflow: hidden; margin-left: auto; flex-shrink: 0;
     }
     .theme-btn {
       padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
@@ -358,7 +380,7 @@
       <span class="pn">02</span>
       <span id="editor-title">EDITOR</span>
       <div class="ph-actions" id="editor-actions" style="display:none">
-        <button class="btn-ghost" onclick="openInPrices()">search prices ↗</button>
+        <button class="btn-ghost" onclick="switchEditorTab('prices')">search prices</button>
         <button class="btn-ghost btn-danger" onclick="deleteCurrentRecipe()">delete</button>
       </div>
     </div>
@@ -367,6 +389,7 @@
     <div class="editor-tabs" id="editor-tabs" style="display:none">
       <button class="editor-tab active" id="etab-ingredients" onclick="switchEditorTab('ingredients')">Ingredients</button>
       <button class="editor-tab" id="etab-instructions" onclick="switchEditorTab('instructions')">Method</button>
+      <button class="editor-tab" id="etab-prices" onclick="switchEditorTab('prices')">Prices</button>
     </div>
 
     <!-- Ingredients view -->
@@ -378,6 +401,12 @@
     <div class="pb" id="editor-instructions-pb" style="display:none">
       <div class="instructions-section" id="instructions-section"></div>
     </div>
+
+    <!-- Prices view (hidden by default) -->
+    <div class="pb" id="editor-prices-pb" style="display:none">
+      <div class="prices-loading">Click "Prices" to search store prices for all ingredients.</div>
+    </div>
+    <div class="prices-total" id="prices-total"></div>
 
     <!-- Add ingredient bar (shown at bottom when on ingredients tab) -->
     <div class="add-ing-bar" id="add-ing-bar">
@@ -566,6 +595,9 @@ function clearEditor() {
   ge('editor-tabs').style.display = 'none';
   ge('editor-ingredients-pb').innerHTML = '<div class="editor-empty">Select a recipe from the left<br>to view and edit it.</div>';
   ge('editor-instructions-pb').style.display = 'none';
+  ge('editor-prices-pb').style.display = 'none';
+  ge('editor-prices-pb').innerHTML = '<div class="prices-loading">Click "Prices" to search store prices for all ingredients.</div>';
+  ge('prices-total').style.display = 'none';
   ge('editor-ingredients-pb').style.display = '';
   ge('add-ing-bar').classList.remove('visible');
   editingInstructions = false;
@@ -575,10 +607,14 @@ function switchEditorTab(tab) {
   editorTab = tab;
   ge('etab-ingredients').classList.toggle('active', tab === 'ingredients');
   ge('etab-instructions').classList.toggle('active', tab === 'instructions');
-  ge('editor-ingredients-pb').style.display = tab === 'ingredients' ? '' : 'none';
+  ge('etab-prices').classList.toggle('active', tab === 'prices');
+  ge('editor-ingredients-pb').style.display  = tab === 'ingredients' ? '' : 'none';
   ge('editor-instructions-pb').style.display = tab === 'instructions' ? '' : 'none';
+  ge('editor-prices-pb').style.display       = tab === 'prices' ? '' : 'none';
+  ge('prices-total').style.display           = 'none';
   ge('add-ing-bar').classList.toggle('visible', tab === 'ingredients' && !!activeRecipe);
   if (tab === 'instructions') renderInstructions();
+  if (tab === 'prices') loadPricesForRecipe();
 }
 
 function renderIngredients() {
@@ -702,11 +738,74 @@ async function deleteIngredient(id) {
   renderIngredients();
 }
 
-// ── "Search prices" shortcut ──────────────────────────────────────────────────
-function openInPrices() {
-  if (!activeRecipe?.ingredients?.length) return;
-  const first = activeRecipe.ingredients[0].ingredient_name;
-  window.open(`/prices?q=${encodeURIComponent(first)}`, '_blank');
+// ── Inline price search ───────────────────────────────────────────────────────
+async function loadPricesForRecipe() {
+  if (!activeId) return;
+  const pb = ge('editor-prices-pb');
+  const totalEl = ge('prices-total');
+  pb.innerHTML = '<div class="prices-loading pulsing">Searching prices for all ingredients…</div>';
+  totalEl.style.display = 'none';
+
+  try {
+    const data = await fetch(`/meals/shopping?recipe_ids=${activeId}`).then(r => r.json());
+    renderPricesPanel(data);
+  } catch(e) {
+    pb.innerHTML = `<div class="prices-loading" style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderPricesPanel(data) {
+  const pb = ge('editor-prices-pb');
+  const totalEl = ge('prices-total');
+  const items = data.items || [];
+
+  if (!items.length) {
+    pb.innerHTML = '<div class="prices-loading">No ingredients found.</div>';
+    return;
+  }
+
+  let found = 0, missing = 0;
+  let html = '';
+  for (const item of items) {
+    const c = item.cheapest;
+    const p = c ? (c.price_per_kg || c.price) : null;
+    if (p != null) found++; else missing++;
+    html += `<div class="price-row">
+      <span class="pr-name" title="${esc(item.ingredient)}">${esc(item.ingredient)}</span>
+      <span class="pr-qty">${item.quantity} ${esc(item.unit)}</span>
+      ${c && p != null
+        ? `<span class="pr-store"><span class="store-dot store-${c.store}"></span>${storeLabel(c.store)}</span>
+           <span class="pr-price">${fmtPrice(p)}</span>`
+        : `<span class="pr-none">no data</span>`
+      }
+    </div>`;
+  }
+
+  if (missing > 0) {
+    html += `<div style="padding:10px 16px;font-family:var(--mono);font-size:9px;color:var(--text-muted);">
+      ${missing} ingredient${missing > 1 ? 's' : ''} without price data —
+      <a href="/prices" style="color:var(--accent)">search manually →</a>
+    </div>`;
+  }
+
+  pb.innerHTML = html;
+
+  // Store totals footer
+  const st = data.store_totals || {};
+  const entries = Object.entries(st).sort(([,a],[,b]) => a - b);
+  if (entries.length) {
+    const min = entries[0][1];
+    let th = `<div class="pt-hdr">Estimated total — cheapest store first</div>`;
+    for (const [store, total] of entries) {
+      const best = Math.abs(total - min) < 0.01;
+      th += `<div class="pt-row">
+        <div class="pt-store"><span class="store-dot store-${store}"></span>${storeLabel(store)}</div>
+        <div class="pt-amount ${best ? 'pt-best' : ''}">${fmtPrice(total)}${best ? ' ★' : ''}</div>
+      </div>`;
+    }
+    totalEl.innerHTML = th;
+    totalEl.style.display = '';
+  }
 }
 
 // ── Shopping list ─────────────────────────────────────────────────────────────
