@@ -356,6 +356,16 @@
     <div style="max-width:560px;padding:20px 0;">
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:16px;">
+        <div style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">Uitkyk Catalog Import</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
+          Crawls all product categories on <strong style="color:var(--text)">uitkyk.online</strong>, normalizes each product name to a canonical ingredient (e.g. "CLOVER MILK FRESH FULL CREAM 500ml" → "Milk"), and stores prices in the DB for shopping list lookups.
+          Takes ~2–3 minutes. Run after prices change at the store.
+        </p>
+        <button class="btn-primary" id="uitkyk-btn" onclick="runUitkykImport()">Import Uitkyk Catalog</button>
+        <span id="uitkyk-msg" style="display:none;margin-left:12px;font-family:var(--mono);font-size:11px;"></span>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:16px;">
         <div style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">Ingredient Normalization</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
           Backfill <code style="background:var(--surface2);padding:1px 5px;border-radius:2px;font-size:12px;">canonical_name</code> for all existing receipt items that haven't been normalized yet.
@@ -633,6 +643,32 @@
   }
 
   // ── Tools ─────────────────────────────────────────────────────────────────
+  async function runUitkykImport() {
+    const btn = document.getElementById('uitkyk-btn');
+    const msg = document.getElementById('uitkyk-msg');
+    btn.disabled = true;
+    btn.textContent = 'Importing… (2–3 min)';
+    msg.style.display = 'none';
+    try {
+      const res  = await fetch('/admin/import-uitkyk-catalog', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        msg.style.color = 'var(--green)';
+        msg.textContent = `✓ Imported ${data.imported} products from Uitkyk`;
+      } else {
+        msg.style.color = 'var(--red)';
+        msg.textContent = data.detail || 'Error';
+      }
+    } catch(e) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Network error';
+    } finally {
+      msg.style.display = '';
+      btn.disabled = false;
+      btn.textContent = 'Import Uitkyk Catalog';
+    }
+  }
+
   async function runNormalize() {
     const btn = document.getElementById('normalize-btn');
     const msg = document.getElementById('normalize-msg');

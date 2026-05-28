@@ -1080,6 +1080,55 @@ def receipt_price_history(
     return results
 
 
+@app.post("/admin/import-uitkyk-catalog")
+async def admin_import_uitkyk_catalog(
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    """
+    Crawl the full Uitkyk catalog (~300 products), normalize all names with
+    Claude Haiku, and store in StoreListing.  Existing Uitkyk listings are
+    cleared first so prices stay fresh.
+    """
+    from scrapers.uitkyk import UitkykScraper
+    from normalizer import normalize_names
+
+    scraper = UitkykScraper()
+
+    logger.info("Uitkyk catalog import: starting full crawl…")
+    products = await scraper.import_full_catalog()
+
+    if not products:
+        raise HTTPException(500, "Catalog crawl returned no products")
+
+    # Normalize product names → canonical ingredients
+    raw_names = [p.name for p in products]
+    logger.info(f"Uitkyk catalog import: normalizing {len(raw_names)} product names…")
+    mapping = normalize_names(raw_names)
+
+    # Clear old Uitkyk listings and save fresh ones
+    db.query(models.StoreListing).filter(models.StoreListing.store == "uitkyk").delete()
+
+    saved = 0
+    for product in products:
+        canonical = mapping.get(product.name) or product.name
+        db.add(models.StoreListing(
+            store=product.store,
+            store_product_name=product.name,
+            search_query=canonical.lower(),
+            price=product.price,
+            unit_label=product.unit,
+            url=product.url,
+            image_url=product.image_url,
+            in_stock=product.in_stock,
+        ))
+        saved += 1
+
+    db.commit()
+    logger.info(f"Uitkyk catalog import: saved {saved} products")
+    return {"imported": saved, "store": "uitkyk"}
+
+
 @app.post("/admin/normalize-items")
 def admin_normalize_items(
     admin: models.User = Depends(auth.require_admin),
