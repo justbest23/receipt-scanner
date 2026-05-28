@@ -452,11 +452,15 @@ function renderList() {
     </div>`).join('');
 }
 
+// ── Mobile back button ────────────────────────────────────────────────────────
+function mobBack() { document.body.classList.remove('mob-detail-open'); }
+
 // ── Open receipt detail ───────────────────────────────────────────────────────
 async function openReceipt(id) {
   currentId = id;
   location.hash = id;
   renderList();
+  document.body.classList.add('mob-detail-open');
 
   const panel = ge('detail-panel');
   panel.innerHTML = `<div class="empty-state"><div class="empty-inner">Loading…</div></div>`;
@@ -481,6 +485,10 @@ function renderDetail(data) {
   panel.innerHTML = `
     <!-- toolbar -->
     <div class="detail-toolbar">
+      <button class="mob-back-btn" onclick="mobBack()" style="display:none" aria-label="Back">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9,2 4,7 9,12"/></svg>
+        BACK
+      </button>
       <div class="detail-title">
         <strong>Receipt #${data.id}</strong>
         &nbsp;·&nbsp; ${esc(data.store || 'Unknown')}
