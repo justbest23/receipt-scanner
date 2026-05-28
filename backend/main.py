@@ -27,6 +27,7 @@ Meal planning:
 import asyncio
 import io
 import os
+import secrets
 import uuid
 import logging
 from datetime import datetime, timezone, timedelta
@@ -50,10 +51,97 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s  %(messa
 logger = logging.getLogger("main")
 
 UPLOAD_DIR    = Path(os.getenv("UPLOAD_DIR", "/app/uploads"))
-ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/tiff"}
+ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/tiff", "application/pdf", "text/csv", "application/csv", "text/plain"}
 MAX_SIZE_MB   = 20
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _parse_csv_receipt(content: str) -> dict:
+    """Parse a PnP/Checkers-style receipt CSV into pipeline-result format."""
+    import csv, re, io
+    reader = csv.reader(io.StringIO(content))
+    rows = [r for r in reader if any(c.strip() for c in r)]
+
+    items = []
+    total = None
+    for row in rows:
+        if len(row) < 2:
+            continue
+        name_col = row[0].strip()
+        cost_col = row[-1].strip() if len(row) >= 2 else ""
+
+        # Skip header rows
+        if name_col.lower() in ("item", "description", "count"):
+            continue
+
+        # Look for total line
+        if re.match(r"(total|amount due|subtotal)", name_col, re.I):
+            m = re.search(r"[\d.]+", cost_col.replace(",", ""))
+            if m:
+                total = float(m.group())
+            continue
+
+        # Parse cost — strip R, A (VAT flag), spaces
+        cost_str = re.sub(r"[R\sA]", "", cost_col).replace(",", "")
+        try:
+            price = float(cost_str)
+        except ValueError:
+            continue
+
+        # Parse quantity from count column (e.g. "2 @ R1.40" or "2 @ 1.40")
+        qty = 1.0
+        unit_price = None
+        count_col = row[1].strip() if len(row) >= 3 else ""
+        m = re.match(r"([\d.]+)\s*@\s*R?([\d.]+)", count_col)
+        if m:
+            qty = float(m.group(1))
+            unit_price = float(m.group(2))
+
+        vat = cost_col.endswith("A") or "A" in cost_col[-2:]
+        items.append({
+            "name":           name_col,
+            "quantity":       qty,
+            "unit_type":      "unit",
+            "unit_price":     unit_price or (round(price / qty, 2) if qty > 1 else price),
+            "total_price":    price,
+            "vat_applicable": vat,
+            "confidence":     1.0,
+        })
+
+    if total is None and items:
+        total = round(sum(i["total_price"] for i in items), 2)
+
+    return {
+        "extracted": {
+            "store": {"name": None, "confidence": 0},
+            "date":  {"value": None, "confidence": 0},
+            "items": items,
+            "total": total,
+            "subtotal": None,
+            "vat_total": None,
+            "currency": "ZAR",
+        },
+        "vendor": "csv_import",
+        "source": "csv",
+    }
+
+
+def _pdf_to_image(pdf_path: Path) -> Path:
+    """Convert the first page of a PDF to a JPEG and return the new path."""
+    try:
+        import fitz  # PyMuPDF
+        doc  = fitz.open(str(pdf_path))
+        page = doc[0]
+        mat  = fitz.Matrix(2, 2)  # 2× zoom → ~150 dpi
+        pix  = page.get_pixmap(matrix=mat)
+        out  = pdf_path.with_suffix(".jpg")
+        pix.save(str(out))
+        doc.close()
+        return out
+    except ImportError:
+        raise HTTPException(500, "PDF conversion unavailable — PyMuPDF not installed")
+
 
 app = FastAPI(title="Receipt Scanner", version="0.3.0")
 
@@ -135,19 +223,224 @@ def vendors(user: models.User = Depends(auth.get_current_user)):
 
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 
+@app.get("/register", response_class=HTMLResponse, include_in_schema=False)
+def register_page(request: Request, db: Session = Depends(database.get_db)):
+    if _session_user(request, db):
+        return RedirectResponse("/", status_code=303)
+    return (Path("static") / "register.html").read_text()
+
+
+@app.post("/auth/register")
+def register(request: Request, payload: dict, db: Session = Depends(database.get_db)):
+    import re
+    from sqlalchemy import or_, func as sqlfunc
+
+    username     = (payload.get("username") or "").strip().lower()
+    email        = (payload.get("email") or "").strip().lower()
+    password     = payload.get("password") or ""
+    display_name = (payload.get("display_name") or "").strip() or None
+
+    if not username or not email or not password:
+        raise HTTPException(400, "username, email, and password are required")
+    if not re.match(r"^[a-z0-9_\-]{3,32}$", username):
+        raise HTTPException(400, "Username must be 3–32 characters: letters, numbers, _ or -")
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(400, "Invalid email address")
+    if len(password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+
+    conflict_user = db.query(models.User).filter(
+        or_(sqlfunc.lower(models.User.username) == username,
+            sqlfunc.lower(models.User.email) == email)
+    ).first()
+    if conflict_user:
+        raise HTTPException(409, "Username or email already in use")
+
+    conflict_req = db.query(models.RegistrationRequest).filter(
+        or_(models.RegistrationRequest.username == username,
+            models.RegistrationRequest.email == email),
+        models.RegistrationRequest.status.in_(["pending_email", "pending_admin"]),
+    ).first()
+    if conflict_req:
+        raise HTTPException(409, "A pending registration already exists for this username or email")
+
+    token = secrets.token_urlsafe(32)
+    req = models.RegistrationRequest(
+        username      = username,
+        email         = email,
+        display_name  = display_name,
+        password_hash = auth.hash_password(password),
+        email_token   = token,
+        status        = "pending_email",
+    )
+    db.add(req)
+    db.commit()
+
+    try:
+        auth.send_verification_email(email, token)
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {email}: {e}")
+
+    return {"ok": True, "message": "Check your email to verify your address."}
+
+
+@app.post("/auth/resend-verification")
+def resend_verification(request: Request, payload: dict, db: Session = Depends(database.get_db)):
+    email = (payload.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(400, "email is required")
+
+    auth.check_resend_rate_limit(email)
+    auth.record_resend_attempt(email)
+
+    req = db.query(models.RegistrationRequest).filter(
+        models.RegistrationRequest.email == email,
+        models.RegistrationRequest.status == "pending_email",
+    ).first()
+
+    # Always return the same response to avoid leaking whether an email exists
+    if req:
+        new_token = secrets.token_urlsafe(32)
+        req.email_token = new_token
+        db.commit()
+        try:
+            auth.send_verification_email(email, new_token)
+        except Exception as e:
+            logger.error(f"Failed to resend verification email to {email}: {e}")
+
+    return {"ok": True, "message": "If a pending registration exists for that email, a new verification link has been sent."}
+
+
+@app.get("/auth/verify-email", response_class=HTMLResponse, include_in_schema=False)
+def verify_email(token: str, db: Session = Depends(database.get_db)):
+    req = db.query(models.RegistrationRequest).filter(
+        models.RegistrationRequest.email_token == token
+    ).first()
+
+    def _page(title: str, body: str) -> str:
+        return f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>{title} — Basket</title>
+        <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>*{{box-sizing:border-box;margin:0;padding:0}}body{{background:#0d0f11;color:#e2e4e7;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}}.card{{background:#141618;border:1px solid #2a2d32;border-radius:4px;padding:40px 36px;max-width:400px;width:100%;text-align:center}}h1{{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin-bottom:16px}}p{{font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:20px}}a{{color:#f97316;text-decoration:none}}</style>
+        </head><body><div class="card"><h1>{title}</h1>{body}</div></body></html>"""
+
+    if not req:
+        return HTMLResponse(_page("Invalid Link", "<p>This verification link is invalid or has already been used.</p><p><a href='/login'>Back to sign in</a></p>"), status_code=400)
+
+    if req.status == "approved":
+        return HTMLResponse(_page("Already Approved", "<p>Your account has already been approved. <a href='/login'>Sign in</a></p>"))
+
+    if req.status == "denied":
+        return HTMLResponse(_page("Registration Denied", "<p>Your registration was not approved.</p>"))
+
+    if req.email_verified:
+        return HTMLResponse(_page("Already Verified", "<p>Your email is verified and your registration is awaiting admin approval.</p>"))
+
+    req.email_verified = True
+    req.status = "pending_admin"
+    db.commit()
+
+    if auth.ADMIN_EMAIL:
+        try:
+            auth.send_admin_registration_notice(auth.ADMIN_EMAIL, req.username, req.email)
+        except Exception as e:
+            logger.error(f"Failed to send admin notification: {e}")
+
+    return HTMLResponse(_page("Email Verified", "<p>Your email address is confirmed. Your registration is now pending admin approval — you'll be able to sign in once it's approved.</p><p><a href='/login'>Back to sign in</a></p>"))
+
+
+@app.get("/admin/registrations")
+def admin_list_registrations(
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    reqs = db.query(models.RegistrationRequest).order_by(
+        models.RegistrationRequest.created_at.desc()
+    ).all()
+    return [_reg_dict(r) for r in reqs]
+
+
+@app.post("/admin/registrations/{req_id}/approve")
+def admin_approve_registration(
+    req_id: int,
+    payload: dict = None,
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    from sqlalchemy import or_, func as sqlfunc
+    payload = payload or {}
+    req = db.query(models.RegistrationRequest).filter(models.RegistrationRequest.id == req_id).first()
+    if not req:
+        raise HTTPException(404, "Registration not found")
+    if req.status != "pending_admin":
+        raise HTTPException(400, f"Cannot approve a request with status '{req.status}'")
+
+    conflict = db.query(models.User).filter(
+        or_(sqlfunc.lower(models.User.username) == req.username,
+            sqlfunc.lower(models.User.email) == req.email)
+    ).first()
+    if conflict:
+        raise HTTPException(409, "Username or email already taken by an existing user")
+
+    perms = payload.get("permissions") or ["scan", "history", "prices", "meals", "analytics"]
+    user = models.User(
+        username       = req.username,
+        email          = req.email,
+        email_verified = True,
+        display_name   = req.display_name,
+        password_hash  = req.password_hash,
+        is_admin       = False,
+        is_active      = True,
+        permissions    = perms,
+    )
+    db.add(user)
+    req.status      = "approved"
+    req.reviewed_at = datetime.now(timezone.utc)
+    req.reviewed_by = admin.id
+    db.commit()
+    logger.info(f"Admin '{admin.username}' approved registration for '{req.username}'")
+    return {"ok": True}
+
+
+@app.post("/admin/registrations/{req_id}/deny")
+def admin_deny_registration(
+    req_id: int,
+    payload: dict = None,
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    payload = payload or {}
+    req = db.query(models.RegistrationRequest).filter(models.RegistrationRequest.id == req_id).first()
+    if not req:
+        raise HTTPException(404, "Registration not found")
+    if req.status not in ("pending_email", "pending_admin"):
+        raise HTTPException(400, f"Cannot deny a request with status '{req.status}'")
+
+    req.status        = "denied"
+    req.denial_reason = (payload.get("reason") or "").strip() or None
+    req.reviewed_at   = datetime.now(timezone.utc)
+    req.reviewed_by   = admin.id
+    db.commit()
+    logger.info(f"Admin '{admin.username}' denied registration for '{req.username}'")
+    return {"ok": True}
+
+
 @app.post("/auth/login")
 def login(request: Request, payload: dict, db: Session = Depends(database.get_db)):
     ip = request.client.host if request.client else "unknown"
     auth.check_rate_limit(ip)
 
-    username = (payload.get("username") or "").strip().lower()
+    identifier = (payload.get("username") or "").strip().lower()
     password = payload.get("password") or ""
-    if not username or not password:
+    if not identifier or not password:
         auth.record_attempt(ip)
         raise HTTPException(401, "Invalid credentials")
 
-    from sqlalchemy import func as sqlfunc
-    user = db.query(models.User).filter(sqlfunc.lower(models.User.username) == username).first()
+    from sqlalchemy import or_, func as sqlfunc
+    user = db.query(models.User).filter(
+        or_(sqlfunc.lower(models.User.username) == identifier,
+            sqlfunc.lower(models.User.email) == identifier)
+    ).first()
     if not user or not user.is_active or not auth.verify_password(password, user.password_hash):
         auth.record_attempt(ip)
         raise HTTPException(401, "Invalid credentials")
@@ -316,7 +609,11 @@ def scan_receipt(
     filename   = f"{uuid.uuid4()}{ext}"
     image_path = UPLOAD_DIR / filename
     image_path.write_bytes(content)
-    logger.info(f"Processing {filename} ({len(content)/1024:.1f} KB)" + (f" [{model}]" if model else ""))
+
+    if file.content_type == "application/pdf":
+        image_path = _pdf_to_image(image_path)
+
+    logger.info(f"Processing {image_path.name} ({len(content)/1024:.1f} KB)" + (f" [{model}]" if model else ""))
 
     try:
         result = run_pipeline(str(image_path), model=model)
@@ -343,7 +640,11 @@ def scan_receipt_claude(
     filename   = f"{uuid.uuid4()}{ext}"
     image_path = UPLOAD_DIR / filename
     image_path.write_bytes(content)
-    logger.info(f"Claude scan: {filename} ({len(content)/1024:.1f} KB)")
+
+    if file.content_type == "application/pdf":
+        image_path = _pdf_to_image(image_path)
+
+    logger.info(f"Claude scan: {image_path.name} ({len(content)/1024:.1f} KB)")
 
     try:
         result = run_claude_pipeline(str(image_path))
@@ -352,6 +653,59 @@ def scan_receipt_claude(
         raise HTTPException(500, f"Claude pipeline failed: {e}")
 
     return result
+
+
+@app.post("/scan/csv")
+async def scan_receipt_csv(
+    file: UploadFile = File(...),
+    user: models.User = Depends(auth.require_permission("scan")),
+):
+    content_bytes = await file.read()
+    if len(content_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(413, "File too large (max 5 MB)")
+    try:
+        text = content_bytes.decode("utf-8", errors="replace")
+        result = _parse_csv_receipt(text)
+    except Exception as e:
+        logger.error(f"CSV parse error: {e}", exc_info=True)
+        raise HTTPException(400, f"Could not parse CSV: {e}")
+    return result
+
+
+@app.get("/receipts/export")
+def export_receipts(
+    user: models.User = Depends(auth.require_permission("history")),
+    db: Session = Depends(database.get_db),
+):
+    import csv, io
+    from fastapi.responses import StreamingResponse
+
+    q = db.query(models.Receipt).order_by(models.Receipt.created_at.desc())
+    if not user.is_admin:
+        q = q.filter(models.Receipt.user_id == user.id)
+    receipts = q.all()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["receipt_id", "date", "store", "vendor", "item_name", "category",
+                "quantity", "unit_type", "unit_price", "total_price", "vat", "receipt_total", "currency"])
+    for r in receipts:
+        if r.items:
+            for item in r.items:
+                w.writerow([r.id, r.receipt_date, r.store_name, r.vendor,
+                            item.name, item.category, item.quantity, item.unit_type,
+                            item.unit_price, item.total_price, item.vat_applicable,
+                            r.total, r.currency])
+        else:
+            w.writerow([r.id, r.receipt_date, r.store_name, r.vendor,
+                        "", "", "", "", "", "", "", r.total, r.currency])
+
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=receipts_export.csv"},
+    )
 
 
 # ── Confirm (user has reviewed, now save) ─────────────────────────────────────
@@ -1257,12 +1611,25 @@ def household_history(
 
 # ── Analytics ─────────────────────────────────────────────────────────────────
 
+@app.get("/analytics/stores")
+def analytics_stores(
+    user: models.User = Depends(auth.require_permission("analytics")),
+    db: Session = Depends(database.get_db),
+):
+    q = db.query(models.Receipt.store_name).filter(models.Receipt.store_name.isnot(None))
+    if not user.is_admin:
+        q = q.filter(models.Receipt.user_id == user.id)
+    names = sorted({row[0] for row in q.distinct().all() if row[0]})
+    return {"stores": names}
+
+
 @app.get("/analytics/items")
 def analytics_items(
     q: str = Query(default=""),
     from_date: Optional[str] = Query(default=None),
     to_date: Optional[str] = Query(default=None),
     category: Optional[str] = Query(default=None),
+    store: Optional[str] = Query(default=None),
     user: models.User = Depends(auth.require_permission("analytics")),
     db: Session = Depends(database.get_db),
 ):
@@ -1279,6 +1646,8 @@ def analytics_items(
         base = base.filter(models.Receipt.receipt_date <= to_date)
     if category:
         base = base.filter(models.ReceiptItem.category == category)
+    if store:
+        base = base.filter(models.Receipt.store_name == store)
 
     stats = base.with_entities(
         func.count().label("count"),
@@ -1342,6 +1711,7 @@ def analytics_items(
 def analytics_summary(
     from_date: Optional[str] = Query(default=None),
     to_date: Optional[str] = Query(default=None),
+    store: Optional[str] = Query(default=None),
     user: models.User = Depends(auth.require_permission("analytics")),
     db: Session = Depends(database.get_db),
 ):
@@ -1358,6 +1728,9 @@ def analytics_summary(
     if to_date:
         receipt_q = receipt_q.filter(models.Receipt.receipt_date <= to_date)
         item_q    = item_q.filter(models.Receipt.receipt_date <= to_date)
+    if store:
+        receipt_q = receipt_q.filter(models.Receipt.store_name == store)
+        item_q    = item_q.filter(models.Receipt.store_name == store)
 
     total_receipts = receipt_q.count()
     total_spend    = receipt_q.with_entities(func.sum(models.Receipt.total)).scalar()
@@ -1748,13 +2121,29 @@ def _ingredient_dict(i: models.RecipeIngredient) -> dict:
 # ── Serialisation ─────────────────────────────────────────────────────────────
 def _user_dict(u: models.User) -> dict:
     return {
-        "id":           u.id,
-        "username":     u.username,
-        "display_name": u.display_name,
-        "is_admin":     u.is_admin,
-        "is_active":    u.is_active,
-        "permissions":  u.permissions or [],
-        "created_at":   u.created_at.isoformat() if u.created_at else None,
+        "id":             u.id,
+        "username":       u.username,
+        "email":          u.email,
+        "email_verified": u.email_verified,
+        "display_name":   u.display_name,
+        "is_admin":       u.is_admin,
+        "is_active":      u.is_active,
+        "permissions":    u.permissions or [],
+        "created_at":     u.created_at.isoformat() if u.created_at else None,
+    }
+
+
+def _reg_dict(r: models.RegistrationRequest) -> dict:
+    return {
+        "id":             r.id,
+        "username":       r.username,
+        "email":          r.email,
+        "display_name":   r.display_name,
+        "email_verified": r.email_verified,
+        "status":         r.status,
+        "denial_reason":  r.denial_reason,
+        "created_at":     r.created_at.isoformat() if r.created_at else None,
+        "reviewed_at":    r.reviewed_at.isoformat() if r.reviewed_at else None,
     }
 
 

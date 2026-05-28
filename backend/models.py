@@ -9,18 +9,38 @@ from database import Base
 class User(Base):
     __tablename__ = "users"
 
-    id            = Column(Integer, primary_key=True, index=True)
-    username      = Column(String, unique=True, nullable=False, index=True)
-    display_name  = Column(String, nullable=True)
-    password_hash = Column(String, nullable=False)
-    is_admin      = Column(Boolean, default=False, nullable=False)
-    is_active     = Column(Boolean, default=True, nullable=False)
-    permissions   = Column(JSON, default=list)   # list of permission strings
-    created_at    = Column(DateTime(timezone=True), server_default=func.now())
+    id             = Column(Integer, primary_key=True, index=True)
+    username       = Column(String, unique=True, nullable=False, index=True)
+    email          = Column(String, unique=True, nullable=True, index=True)
+    email_verified = Column(Boolean, default=False, nullable=False)
+    display_name   = Column(String, nullable=True)
+    password_hash  = Column(String, nullable=False)
+    is_admin       = Column(Boolean, default=False, nullable=False)
+    is_active      = Column(Boolean, default=True, nullable=False)
+    permissions    = Column(JSON, default=list)
+    created_at     = Column(DateTime(timezone=True), server_default=func.now())
 
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     receipts = relationship("Receipt", back_populates="user")
     recipes  = relationship("Recipe",  back_populates="user")
+
+
+class RegistrationRequest(Base):
+    __tablename__ = "registration_requests"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    username       = Column(String, nullable=False)
+    email          = Column(String, nullable=False, index=True)
+    display_name   = Column(String, nullable=True)
+    password_hash  = Column(String, nullable=False)
+    email_token    = Column(String, unique=True, nullable=False, index=True)
+    email_verified = Column(Boolean, default=False, nullable=False)
+    # pending_email → pending_admin → approved | denied
+    status         = Column(String, default="pending_email", nullable=False)
+    denial_reason  = Column(String, nullable=True)
+    created_at     = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at    = Column(DateTime(timezone=True), nullable=True)
+    reviewed_by    = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 
 class UserSession(Base):

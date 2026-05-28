@@ -5,23 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Basket — Sign In</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script>
+    (function() {
+      var t = localStorage.getItem('basket-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
+        /* ── Dark (default) ── */
+    :root, [data-theme="dark"] {
       --bg:         #0d0f11;
       --surface:    #141618;
       --surface2:   #1c1f22;
       --surface3:   #22262b;
       --border:     #2a2d32;
-      --border2:    #363a40;
+      --border2:    #3d4249;
       --text:       #e2e4e7;
-      --text-dim:   #6b7280;
-      --text-muted: #3f444c;
+      --text-dim:   #9ca3af;
+      --text-muted: #6b7280;
       --accent:     #f97316;
       --accent-dim: #7c3a10;
       --green:      #22c55e;
+      --yellow:     #eab308;
       --red:        #ef4444;
+      --purple:     #a78bfa;
+      --purple-dim: #3b2a6e;
+      --teal:       #2dd4bf;
+      --teal-dim:   #134e4a;
+      --blue:       #60a5fa;
+      --green-dim:  #14532d;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+
+    /* ── Light ── */
+    [data-theme="light"] {
+      --bg:         #f3f4f6;
+      --surface:    #ffffff;
+      --surface2:   #f0f2f4;
+      --surface3:   #e5e7eb;
+      --border:     #d1d5db;
+      --border2:    #bbc0c8;
+      --text:       #111827;
+      --text-dim:   #374151;
+      --text-muted: #6b7280;
+      --accent:     #c2550d;
+      --accent-dim: #fff0e6;
+      --green:      #15803d;
+      --yellow:     #92700a;
+      --red:        #b91c1c;
+      --purple:     #6d28d9;
+      --purple-dim: #ede9fe;
+      --teal:       #0f766e;
+      --teal-dim:   #ccfbf1;
+      --blue:       #1d4ed8;
+      --green-dim:  #dcfce7;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+
+    /* ── High contrast ── */
+    [data-theme="hc"] {
+      --bg:         #000000;
+      --surface:    #0a0a0a;
+      --surface2:   #141414;
+      --surface3:   #1e1e1e;
+      --border:     #6b6b6b;
+      --border2:    #999999;
+      --text:       #ffffff;
+      --text-dim:   #e0e0e0;
+      --text-muted: #b0b0b0;
+      --accent:     #ffaa00;
+      --accent-dim: #3a2700;
+      --green:      #00e676;
+      --yellow:     #ffee58;
+      --red:        #ff5252;
+      --purple:     #d0bcff;
+      --purple-dim: #1a1030;
+      --teal:       #64ffda;
+      --teal-dim:   #003d33;
+      --blue:       #82b1ff;
+      --green-dim:  #003300;
       --mono:       'Space Mono', monospace;
       --sans:       'DM Sans', sans-serif;
     }
@@ -109,6 +175,16 @@
     }
     button[type="submit"]:hover { opacity: .88; }
     button[type="submit"]:disabled { opacity: .5; cursor: default; }
+    .footer-link {
+      margin-top: 24px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .05em;
+      color: var(--text-dim);
+    }
+    .footer-link a { color: var(--accent); text-decoration: none; }
+    .footer-link a:hover { text-decoration: underline; }
     #error-msg {
       display: none;
       margin-top: 16px;
@@ -120,9 +196,27 @@
       font-size: 11px;
       color: var(--red);
     }
+    .theme-toggle {
+      position: fixed; top: 12px; right: 16px;
+      display: flex; align-items: center;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; overflow: hidden; z-index: 100;
+    }
+    .theme-btn {
+      padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      transition: background .15s, color .15s; line-height: 1;
+    }
+    .theme-btn.active { background: var(--accent); color: #fff; }
+    .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
   </style>
 </head>
 <body>
+  <div class="theme-toggle">
+    <button class="theme-btn" data-t="dark"  onclick="setTheme('dark')">DARK</button>
+    <button class="theme-btn" data-t="light" onclick="setTheme('light')">LIGHT</button>
+    <button class="theme-btn" data-t="hc"    onclick="setTheme('hc')">HC</button>
+  </div>
   <div class="card">
     <div class="logo">
       <div class="logo-mark">
@@ -132,13 +226,14 @@
     </div>
     <h1>Sign In</h1>
     <form id="login-form" autocomplete="on">
-      <label for="username">Username</label>
+      <label for="username">Username or Email</label>
       <input type="text" id="username" name="username" autocomplete="username" autofocus required>
       <label for="password">Password</label>
       <input type="password" id="password" name="password" autocomplete="current-password" required>
       <button type="submit" id="submit-btn">Sign In</button>
       <div id="error-msg"></div>
     </form>
+    <div class="footer-link">No account? <a href="/register">Request access</a></div>
   </div>
 
   <script>

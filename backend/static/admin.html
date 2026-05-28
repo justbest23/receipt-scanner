@@ -6,18 +6,26 @@
   <title>Admin — Basket</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      var t = localStorage.getItem('basket-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
+
+    /* ── Dark (default) ── */
+    :root, [data-theme="dark"] {
       --bg:         #0d0f11;
       --surface:    #141618;
       --surface2:   #1c1f22;
       --surface3:   #22262b;
       --border:     #2a2d32;
-      --border2:    #363a40;
+      --border2:    #3d4249;
       --text:       #e2e4e7;
-      --text-dim:   #6b7280;
-      --text-muted: #3f444c;
+      --text-dim:   #9ca3af;
+      --text-muted: #6b7280;
       --accent:     #f97316;
       --accent-dim: #7c3a10;
       --green:      #22c55e;
@@ -27,7 +35,46 @@
       --mono:       'Space Mono', monospace;
       --sans:       'DM Sans', sans-serif;
     }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    /* ── Light ── */
+    [data-theme="light"] {
+      --bg:         #f3f4f6;
+      --surface:    #ffffff;
+      --surface2:   #f0f2f4;
+      --surface3:   #e5e7eb;
+      --border:     #d1d5db;
+      --border2:    #bbc0c8;
+      --text:       #111827;
+      --text-dim:   #374151;
+      --text-muted: #6b7280;
+      --accent:     #c2550d;
+      --accent-dim: #fff0e6;
+      --green:      #15803d;
+      --red:        #b91c1c;
+      --purple:     #6d28d9;
+      --purple-dim: #ede9fe;
+    }
+
+    /* ── High contrast ── */
+    [data-theme="hc"] {
+      --bg:         #000000;
+      --surface:    #0a0a0a;
+      --surface2:   #141414;
+      --surface3:   #1e1e1e;
+      --border:     #6b6b6b;
+      --border2:    #999999;
+      --text:       #ffffff;
+      --text-dim:   #e0e0e0;
+      --text-muted: #b0b0b0;
+      --accent:     #ffaa00;
+      --accent-dim: #3a2700;
+      --green:      #00e676;
+      --red:        #ff5252;
+      --purple:     #d0bcff;
+      --purple-dim: #1a1030;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); transition: background .2s, color .2s; }
     header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 24px; border-bottom: 1px solid var(--border);
@@ -40,7 +87,31 @@
     nav a { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; }
     nav a.active, nav a:hover { color: var(--text); }
     nav a.active { color: var(--purple); }
+    .tab-bar { display: flex; gap: 2px; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+    .tab-btn {
+      padding: 8px 18px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+      text-transform: uppercase; background: transparent; border: none; color: var(--text-dim);
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .tab-btn.active { color: var(--purple); border-bottom-color: var(--purple); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .badge-pending  { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+    .badge-verified { background: color-mix(in srgb, var(--green)  15%, transparent); color: var(--green); }
+    .badge-denied   { background: color-mix(in srgb, var(--red)    15%, transparent); color: var(--red); }
     #user-nav { display: flex; align-items: center; margin-left: 16px; }
+    .theme-toggle {
+      display: flex; align-items: center; gap: 3px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; padding: 0; overflow: hidden; margin-left: 12px;
+    }
+    .theme-btn {
+      padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      transition: background .15s, color .15s; line-height: 1;
+    }
+    .theme-btn.active { background: var(--accent); color: #fff; }
+    .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
 
     .main { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
     h2 { font-family: var(--mono); font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 20px; }
@@ -58,10 +129,10 @@
       display: inline-block; padding: 2px 7px; border-radius: 2px;
       font-family: var(--mono); font-size: 10px; letter-spacing: .04em; margin-right: 3px;
     }
-    .badge-admin  { background: rgba(167,139,250,.15); color: var(--purple); }
-    .badge-active { background: rgba(34,197,94,.12);  color: var(--green); }
-    .badge-off    { background: rgba(239,68,68,.12);  color: var(--red); }
-    .badge-perm   { background: rgba(249,115,22,.1);  color: var(--accent); }
+    .badge-admin  { background: var(--purple-dim); color: var(--purple); }
+    .badge-active { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+    .badge-off    { background: color-mix(in srgb, var(--red)   15%, transparent); color: var(--red); }
+    .badge-perm   { background: color-mix(in srgb, var(--accent)12%, transparent); color: var(--accent); }
     .action-btn {
       padding: 4px 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .04em;
       border-radius: 2px; cursor: pointer; border: 1px solid var(--border2);
@@ -83,6 +154,14 @@
       transition: border-color .15s;
     }
     .form-row input:focus { border-color: var(--accent); }
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 36px !important; }
+    .pw-toggle {
+      position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; padding: 0;
+      color: var(--text-muted); line-height: 1;
+    }
+    .pw-toggle:hover { color: var(--text-dim); }
     .perms-grid { display: flex; flex-wrap: wrap; gap: 8px; }
     .perm-cb { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-dim); }
     .perm-cb input { accent-color: var(--accent); cursor: pointer; }
@@ -93,8 +172,8 @@
     .toggle-admin { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
     .toggle-admin input { accent-color: var(--purple); cursor: pointer; }
     .form-msg { font-family: var(--mono); font-size: 11px; padding: 8px 12px; border-radius: 3px; }
-    .form-msg.ok  { background: rgba(34,197,94,.1);  color: var(--green); border: 1px solid rgba(34,197,94,.2); }
-    .form-msg.err { background: rgba(239,68,68,.1); color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+    .form-msg.ok  { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green); border: 1px solid color-mix(in srgb, var(--green) 25%, transparent); }
+    .form-msg.err { background: color-mix(in srgb, var(--red)   12%, transparent); color: var(--red);   border: 1px solid color-mix(in srgb, var(--red)   25%, transparent); }
 
     /* ── Modal ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
@@ -121,9 +200,20 @@
     <a href="/admin" class="active">Admin</a>
   </nav>
   <div id="user-nav"></div>
+  <div class="theme-toggle" id="theme-toggle">
+    <button class="theme-btn" data-t="dark"  onclick="setTheme('dark')">DARK</button>
+    <button class="theme-btn" data-t="light" onclick="setTheme('light')">LIGHT</button>
+    <button class="theme-btn" data-t="hc"    onclick="setTheme('hc')">HC</button>
+  </div>
 </header>
 
 <div class="main">
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('users')">Users</button>
+    <button class="tab-btn" id="reg-tab-btn" onclick="switchTab('registrations')">Registrations <span id="pending-badge" style="display:none;background:rgba(249,115,22,.15);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px;"></span></button>
+  </div>
+
+  <div class="tab-pane active" id="tab-users">
   <h2>User Management</h2>
 
   <table class="user-table" id="user-table">
@@ -151,7 +241,21 @@
         </div>
         <div class="form-row">
           <label id="f-pw-label">Password *</label>
-          <input type="password" id="f-password" autocomplete="new-password" placeholder="min 8 chars">
+          <div class="pw-wrap">
+            <input type="password" id="f-password" autocomplete="new-password" placeholder="min 8 chars">
+            <button type="button" class="pw-toggle" onclick="togglePw('f-password',this)" tabindex="-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-row" id="f-pw2-row">
+          <label id="f-pw2-label">Confirm Password *</label>
+          <div class="pw-wrap">
+            <input type="password" id="f-password2" autocomplete="new-password" placeholder="repeat password">
+            <button type="button" class="pw-toggle" onclick="togglePw('f-password2',this)" tabindex="-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
       </div>
       <div>
@@ -177,6 +281,42 @@
       <span id="form-msg" class="form-msg" style="display:none;"></span>
     </div>
   </div>
+  </div><!-- /tab-users -->
+
+  <div class="tab-pane" id="tab-registrations">
+    <h2>Registration Requests</h2>
+    <table class="user-table" id="reg-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Display Name</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Requested</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="reg-tbody"></tbody>
+    </table>
+  </div><!-- /tab-registrations -->
+
+</div>
+
+<!-- Deny reason modal -->
+<div class="modal-overlay" id="deny-modal">
+  <div class="modal">
+    <h3>Deny Registration</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;" id="deny-modal-text"></p>
+    <div class="form-row">
+      <label>Reason (optional)</label>
+      <input type="text" id="deny-reason" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-primary" style="background:var(--red);" onclick="confirmDeny()">Deny</button>
+      <button class="btn-cancel" onclick="closeDenyModal()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- Delete confirm modal -->
@@ -192,6 +332,22 @@
 </div>
 
 <script src="/static/auth.js"></script>
+<script>
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('basket-theme', t);
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.t === t);
+    });
+  }
+  // Mark the active button on load
+  (function() {
+    var t = document.documentElement.getAttribute('data-theme') || 'dark';
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.t === t);
+    });
+  })();
+</script>
 <script>
   const ALL_PERMS = ['scan','history','prices','meals','analytics'];
   let users = [];
@@ -254,32 +410,53 @@
     });
   }
 
+  function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const showing = inp.type === 'text';
+    inp.type = showing ? 'password' : 'text';
+    btn.style.color = showing ? '' : 'var(--accent)';
+  }
+
   function startEdit(id) {
     const u = users.find(x => x.id === id);
     if (!u) return;
     editingId = id;
     document.getElementById('form-title').textContent = 'Edit User';
-    document.getElementById('f-username').value   = u.username;
+    document.getElementById('f-username').value    = u.username;
     document.getElementById('f-username').disabled = true;
-    document.getElementById('f-password').value   = '';
-    document.getElementById('f-pw-label').textContent = 'New Password (leave blank to keep)';
-    document.getElementById('f-display').value    = u.display_name || '';
-    document.getElementById('f-admin').checked    = u.is_admin;
+    document.getElementById('f-password').value    = '';
+    document.getElementById('f-password2').value   = '';
+    document.getElementById('f-pw-label').textContent  = 'New Password (leave blank to keep)';
+    document.getElementById('f-pw2-label').textContent = 'Confirm New Password';
+    document.getElementById('f-pw2-row').style.display = 'none';
+    document.getElementById('f-display').value   = u.display_name || '';
+    document.getElementById('f-admin').checked   = u.is_admin;
     setCheckedPerms(u.permissions);
     document.getElementById('form-submit-btn').textContent = 'Save Changes';
     document.getElementById('form-cancel-btn').style.display = '';
     hideMsg();
   }
 
+  // Show confirm field when user starts typing a new password during edit
+  document.getElementById('f-password').addEventListener('input', () => {
+    if (editingId) {
+      document.getElementById('f-pw2-row').style.display =
+        document.getElementById('f-password').value ? '' : 'none';
+    }
+  });
+
   function cancelEdit() {
     editingId = null;
     document.getElementById('form-title').textContent = 'Add User';
-    document.getElementById('f-username').value   = '';
+    document.getElementById('f-username').value    = '';
     document.getElementById('f-username').disabled = false;
-    document.getElementById('f-password').value   = '';
-    document.getElementById('f-pw-label').textContent = 'Password *';
-    document.getElementById('f-display').value    = '';
-    document.getElementById('f-admin').checked    = false;
+    document.getElementById('f-password').value    = '';
+    document.getElementById('f-password2').value   = '';
+    document.getElementById('f-pw-label').textContent  = 'Password *';
+    document.getElementById('f-pw2-label').textContent = 'Confirm Password *';
+    document.getElementById('f-pw2-row').style.display = '';
+    document.getElementById('f-display').value   = '';
+    document.getElementById('f-admin').checked   = false;
     setCheckedPerms([]);
     document.getElementById('form-submit-btn').textContent = 'Create User';
     document.getElementById('form-cancel-btn').style.display = 'none';
@@ -289,10 +466,15 @@
   async function submitForm() {
     const username    = document.getElementById('f-username').value.trim();
     const password    = document.getElementById('f-password').value;
+    const password2   = document.getElementById('f-password2').value;
     const displayName = document.getElementById('f-display').value.trim();
     const isAdmin     = document.getElementById('f-admin').checked;
     const permissions = getCheckedPerms();
     hideMsg();
+
+    if (password && password !== password2) {
+      return showMsg('err', 'Passwords do not match.');
+    }
 
     if (editingId) {
       const body = { display_name: displayName, is_admin: isAdmin, permissions };
@@ -312,6 +494,7 @@
       }
     } else {
       if (!username || !password) return showMsg('err', 'Username and password are required.');
+      if (!password2) return showMsg('err', 'Please confirm the password.');
       const res = await fetch('/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -371,6 +554,114 @@
   });
 
   loadUsers();
+  loadRegistrations();
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  // ── Registrations ─────────────────────────────────────────────────────────
+  let regs = [];
+  let denyingId = null;
+
+  async function loadRegistrations() {
+    const res = await fetch('/admin/registrations');
+    if (!res.ok) return;
+    regs = await res.json();
+    renderRegistrations();
+    const pending = regs.filter(r => r.status === 'pending_admin').length;
+    const badge = document.getElementById('pending-badge');
+    if (pending > 0) {
+      badge.textContent = pending;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function renderRegistrations() {
+    const tbody = document.getElementById('reg-tbody');
+    tbody.innerHTML = '';
+    if (!regs.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);font-size:12px;padding:20px 12px;">No registration requests yet.</td></tr>';
+      return;
+    }
+    regs.forEach(r => {
+      const tr = document.createElement('tr');
+      const emailBadge = r.email_verified
+        ? '<span class="badge badge-verified">Verified</span>'
+        : '<span class="badge badge-off">Unverified</span>';
+      let statusBadge = '';
+      if (r.status === 'pending_email')  statusBadge = '<span class="badge badge-pending">Awaiting email</span>';
+      if (r.status === 'pending_admin')  statusBadge = '<span class="badge badge-pending">Awaiting approval</span>';
+      if (r.status === 'approved')       statusBadge = '<span class="badge badge-verified">Approved</span>';
+      if (r.status === 'denied')         statusBadge = '<span class="badge badge-denied">Denied</span>';
+      const created = r.created_at ? new Date(r.created_at).toLocaleDateString() : '—';
+      const canAct = r.status === 'pending_admin';
+      tr.innerHTML = `
+        <td style="font-family:var(--mono);font-size:12px;">${esc(r.username)}</td>
+        <td style="font-size:12px;">${esc(r.email)}</td>
+        <td style="font-size:12px;">${esc(r.display_name || '—')}</td>
+        <td>${emailBadge}</td>
+        <td>${statusBadge}${r.denial_reason ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px;">${esc(r.denial_reason)}</span>` : ''}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">${created}</td>
+        <td>
+          ${canAct ? `<button class="action-btn" onclick="approveReg(${r.id})">Approve</button>` : ''}
+          ${canAct ? `<button class="action-btn danger" onclick="openDenyModal(${r.id})">Deny</button>` : ''}
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function approveReg(id) {
+    const res = await fetch(`/admin/registrations/${id}/approve`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+    if (res.ok) {
+      loadRegistrations();
+      loadUsers();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.detail || 'Approval failed.');
+    }
+  }
+
+  function openDenyModal(id) {
+    const r = regs.find(x => x.id === id);
+    if (!r) return;
+    denyingId = id;
+    document.getElementById('deny-modal-text').textContent = `Deny registration for "${r.username}" (${r.email})?`;
+    document.getElementById('deny-reason').value = '';
+    document.getElementById('deny-modal').classList.add('open');
+  }
+
+  function closeDenyModal() {
+    denyingId = null;
+    document.getElementById('deny-modal').classList.remove('open');
+  }
+
+  async function confirmDeny() {
+    if (!denyingId) return;
+    const reason = document.getElementById('deny-reason').value.trim();
+    const res = await fetch(`/admin/registrations/${denyingId}/deny`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ reason }),
+    });
+    closeDenyModal();
+    if (res.ok) {
+      loadRegistrations();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.detail || 'Denial failed.');
+    }
+  }
+
+  document.getElementById('deny-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeDenyModal();
+  });
 </script>
 </body>
 </html>

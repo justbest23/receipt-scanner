@@ -5,30 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Basket · Insights</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script>
+    (function() {
+      var t = localStorage.getItem('basket-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
+        /* ── Dark (default) ── */
+    :root, [data-theme="dark"] {
       --bg:         #0d0f11;
       --surface:    #141618;
       --surface2:   #1c1f22;
       --surface3:   #22262b;
       --border:     #2a2d32;
-      --border2:    #363a40;
+      --border2:    #3d4249;
       --text:       #e2e4e7;
-      --text-dim:   #6b7280;
-      --text-muted: #3f444c;
+      --text-dim:   #9ca3af;
+      --text-muted: #6b7280;
       --accent:     #f97316;
       --accent-dim: #7c3a10;
       --green:      #22c55e;
       --yellow:     #eab308;
       --red:        #ef4444;
       --purple:     #a78bfa;
+      --purple-dim: #3b2a6e;
       --teal:       #2dd4bf;
+      --teal-dim:   #134e4a;
+      --blue:       #60a5fa;
+      --green-dim:  #14532d;
       --mono:       'Space Mono', monospace;
       --sans:       'DM Sans', sans-serif;
     }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    /* ── Light ── */
+    [data-theme="light"] {
+      --bg:         #f3f4f6;
+      --surface:    #ffffff;
+      --surface2:   #f0f2f4;
+      --surface3:   #e5e7eb;
+      --border:     #d1d5db;
+      --border2:    #bbc0c8;
+      --text:       #111827;
+      --text-dim:   #374151;
+      --text-muted: #6b7280;
+      --accent:     #c2550d;
+      --accent-dim: #fff0e6;
+      --green:      #15803d;
+      --yellow:     #92700a;
+      --red:        #b91c1c;
+      --purple:     #6d28d9;
+      --purple-dim: #ede9fe;
+      --teal:       #0f766e;
+      --teal-dim:   #ccfbf1;
+      --blue:       #1d4ed8;
+      --green-dim:  #dcfce7;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+
+    /* ── High contrast ── */
+    [data-theme="hc"] {
+      --bg:         #000000;
+      --surface:    #0a0a0a;
+      --surface2:   #141414;
+      --surface3:   #1e1e1e;
+      --border:     #6b6b6b;
+      --border2:    #999999;
+      --text:       #ffffff;
+      --text-dim:   #e0e0e0;
+      --text-muted: #b0b0b0;
+      --accent:     #ffaa00;
+      --accent-dim: #3a2700;
+      --green:      #00e676;
+      --yellow:     #ffee58;
+      --red:        #ff5252;
+      --purple:     #d0bcff;
+      --purple-dim: #1a1030;
+      --teal:       #64ffda;
+      --teal-dim:   #003d33;
+      --blue:       #82b1ff;
+      --green-dim:  #003300;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); transition: background .2s, color .2s; }
 
     header {
       display: flex; align-items: center; gap: 0;
@@ -45,7 +108,7 @@
       transition: color .15s, background .15s;
     }
     .nav-link:hover { color: var(--text); }
-    .nav-link.active { color: var(--accent); background: rgba(249,115,22,.08); }
+    .nav-link.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 
     /* ── Filter bar ── */
     .filter-bar {
@@ -145,6 +208,18 @@
     .surface-box { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
 
     select option { background: var(--surface2); }
+    .theme-toggle {
+      display: flex; align-items: center;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; overflow: hidden; margin-left: 12px; flex-shrink: 0;
+    }
+    .theme-btn {
+      padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      transition: background .15s, color .15s; line-height: 1;
+    }
+    .theme-btn.active { background: var(--accent); color: #fff; }
+    .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
   </style>
 </head>
 <body>
@@ -184,6 +259,9 @@
     <option>snacks</option><option>alcohol</option><option>household</option>
     <option>toiletries</option><option>beauty</option><option>other</option>
   </select>
+  <span class="filter-sep">|</span>
+  <span class="filter-label">STORE</span>
+  <select id="store-select"><option value="">All</option></select>
   <button class="btn-apply" onclick="run()">Apply</button>
   <button class="btn-clear" onclick="clearFilters()">Clear</button>
   <span class="mode-indicator" id="mode-indicator">OVERVIEW</span>
@@ -196,16 +274,64 @@
 <script>
 const ge = id => document.getElementById(id);
 
+// ── Sort state for history table ──────────────────────────────────────────────
+let historyData = [];
+let sortCol = null;
+let sortDir = 1;
+const SORT_KEY = { date:'date', store:'store', name:'name', qty:'quantity', unit:'unit_price', total:'total_price' };
+
+function sortHistory(col) {
+  if (sortCol === col) { sortDir *= -1; } else { sortCol = col; sortDir = 1; }
+  renderHistory();
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-section');
+  if (!el) return;
+  const data = [...historyData];
+  if (sortCol) {
+    const key = SORT_KEY[sortCol];
+    data.sort((a, b) => {
+      const av = a[key], bv = b[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    });
+  }
+  const th = (col, label) => {
+    const arrow = sortCol === col ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
+    return `<th style="cursor:pointer;user-select:none;" onclick="sortHistory('${col}')">${label}${arrow}</th>`;
+  };
+  el.innerHTML = data.length === 0
+    ? '<div class="empty" style="padding:24px">No history</div>'
+    : `<div class="surface-box"><table class="data-table"><thead><tr>
+        ${th('date','Date')}${th('store','Store')}${th('name','Item')}${th('qty','Qty')}${th('unit','Unit Price')}${th('total','Total')}
+       </tr></thead><tbody>` +
+      data.map(h =>
+        `<tr>
+          <td class="mono-val">${h.date||'—'}</td>
+          <td>${esc(h.store)}</td>
+          <td style="color:var(--text-dim);font-size:12px">${esc(h.name)}</td>
+          <td class="mono-val">${h.quantity??1}</td>
+          <td class="mono-val">${h.unit_price!=null?'R '+fmt(h.unit_price):'—'}</td>
+          <td class="mono-val">${h.total_price!=null?'R '+fmt(h.total_price):'—'}</td>
+        </tr>`).join('') +
+      `</tbody></table></div>`;
+}
+
 function params() {
   const p = new URLSearchParams();
   const q  = ge('search-input').value.trim();
   const fd = ge('from-date').value;
   const td = ge('to-date').value;
   const ct = ge('cat-select').value;
+  const st = ge('store-select').value;
   if (q)  p.set('q', q);
   if (fd) p.set('from_date', fd);
   if (td) p.set('to_date', td);
   if (ct) p.set('category', ct);
+  if (st) p.set('store', st);
   return p;
 }
 
@@ -214,15 +340,28 @@ function clearFilters() {
   ge('from-date').value    = '';
   ge('to-date').value      = '';
   ge('cat-select').value   = '';
+  ge('store-select').value = '';
   run();
 }
 
 async function run() {
-  const q = ge('search-input').value.trim();
-  ge('mode-indicator').textContent = q ? `ITEM: "${q}"` : 'OVERVIEW';
+  const q  = ge('search-input').value.trim();
+  const fd = ge('from-date').value;
+  const td = ge('to-date').value;
+  const ct = ge('cat-select').value;
+  const st = ge('store-select').value;
+
+  const hasFilter = q || fd || td || ct || st;
+
+  let label = 'OVERVIEW';
+  const parts = [q ? `"${q}"` : '', ct, st, (fd||td) ? `${fd||'…'}→${td||'now'}` : ''].filter(Boolean);
+  if (parts.length) label = parts.join(' · ').toUpperCase();
+  ge('mode-indicator').textContent = label;
+  sortCol = null; sortDir = 1; historyData = [];
+
   ge('main-content').innerHTML = '<div class="empty loading">Loading…</div>';
 
-  if (q) {
+  if (hasFilter) {
     await runItemSearch();
   } else {
     await runSummary();
@@ -241,6 +380,7 @@ async function runItemSearch() {
 }
 
 function renderItemSearch(d) {
+  historyData = d.history;
   const s = d.stats;
   const maxStoreTotal = Math.max(...d.by_store.map(x => x.total), 1);
 
@@ -279,35 +419,19 @@ function renderItemSearch(d) {
       </div>
 
       <div class="section">
-        <div class="section-head">Purchase History</div>
-        ${d.history.length === 0 ? '<div class="empty" style="padding:24px">No history</div>' : `
-        <div class="surface-box">
-          <table class="data-table">
-            <thead><tr>
-              <th>Date</th><th>Store</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th>
-            </tr></thead>
-            <tbody>${d.history.map(h => `
-              <tr>
-                <td class="mono-val">${h.date || '—'}</td>
-                <td>${esc(h.store)}</td>
-                <td style="color:var(--text-dim);font-size:12px">${esc(h.name)}</td>
-                <td class="mono-val">${h.quantity ?? 1}</td>
-                <td class="mono-val">${h.unit_price != null ? 'R ' + fmt(h.unit_price) : '—'}</td>
-                <td class="mono-val">${h.total_price != null ? 'R ' + fmt(h.total_price) : '—'}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`}
+        <div class="section-head">Purchase History <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click column to sort</span></div>
+        <div id="history-section"></div>
       </div>
     </div>`;
 
   ge('main-content').innerHTML = html;
+  renderHistory();
 }
 
-// ── Summary (no search) ───────────────────────────────────────────────────────
+// ── Summary (no filters) ──────────────────────────────────────────────────────
 async function runSummary() {
   const p = params();
-  p.delete('q');
+  p.delete('q'); p.delete('category');
   try {
     const d = await fetch('/analytics/summary?' + p).then(r => r.json());
     renderSummary(d);
@@ -406,9 +530,36 @@ function esc(s)    { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'
 // ── Search on Enter ───────────────────────────────────────────────────────────
 ge('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
 
+// ── Populate store dropdown ───────────────────────────────────────────────────
+async function loadStores() {
+  try {
+    const d = await fetch('/analytics/stores').then(r => r.json());
+    const sel = ge('store-select');
+    d.stores.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = s;
+      sel.appendChild(opt);
+    });
+  } catch {}
+}
+
 // ── Initial load ──────────────────────────────────────────────────────────────
+loadStores();
 run();
 </script>
 <script src="/static/auth.js"></script>
+<script>
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('basket-theme', t);
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.t === t);
+    });
+  }
+  (function() {
+    var t = document.documentElement.getAttribute('data-theme') || 'dark';
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  })();
+</script>
 </body>
 </html>

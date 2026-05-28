@@ -12,3 +12,4 @@ beautifulsoup4==4.12.3
 lxml==5.2.2
 playwright==1.44.0
 argon2-cffi==23.1.0
+pymupdf>=1.24.0

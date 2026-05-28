@@ -5,31 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Household — Basket</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script>
+    (function() {
+      var t = localStorage.getItem('basket-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
+        /* ── Dark (default) ── */
+    :root, [data-theme="dark"] {
       --bg:         #0d0f11;
       --surface:    #141618;
       --surface2:   #1c1f22;
       --surface3:   #22262b;
       --border:     #2a2d32;
-      --border2:    #363a40;
+      --border2:    #3d4249;
       --text:       #e2e4e7;
-      --text-dim:   #6b7280;
-      --text-muted: #3f444c;
+      --text-dim:   #9ca3af;
+      --text-muted: #6b7280;
       --accent:     #f97316;
       --accent-dim: #7c3a10;
       --green:      #22c55e;
       --yellow:     #eab308;
       --red:        #ef4444;
       --purple:     #a78bfa;
+      --purple-dim: #3b2a6e;
       --teal:       #2dd4bf;
+      --teal-dim:   #134e4a;
       --blue:       #60a5fa;
+      --green-dim:  #14532d;
       --mono:       'Space Mono', monospace;
       --sans:       'DM Sans', sans-serif;
     }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+    /* ── Light ── */
+    [data-theme="light"] {
+      --bg:         #f3f4f6;
+      --surface:    #ffffff;
+      --surface2:   #f0f2f4;
+      --surface3:   #e5e7eb;
+      --border:     #d1d5db;
+      --border2:    #bbc0c8;
+      --text:       #111827;
+      --text-dim:   #374151;
+      --text-muted: #6b7280;
+      --accent:     #c2550d;
+      --accent-dim: #fff0e6;
+      --green:      #15803d;
+      --yellow:     #92700a;
+      --red:        #b91c1c;
+      --purple:     #6d28d9;
+      --purple-dim: #ede9fe;
+      --teal:       #0f766e;
+      --teal-dim:   #ccfbf1;
+      --blue:       #1d4ed8;
+      --green-dim:  #dcfce7;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+
+    /* ── High contrast ── */
+    [data-theme="hc"] {
+      --bg:         #000000;
+      --surface:    #0a0a0a;
+      --surface2:   #141414;
+      --surface3:   #1e1e1e;
+      --border:     #6b6b6b;
+      --border2:    #999999;
+      --text:       #ffffff;
+      --text-dim:   #e0e0e0;
+      --text-muted: #b0b0b0;
+      --accent:     #ffaa00;
+      --accent-dim: #3a2700;
+      --green:      #00e676;
+      --yellow:     #ffee58;
+      --red:        #ff5252;
+      --purple:     #d0bcff;
+      --purple-dim: #1a1030;
+      --teal:       #64ffda;
+      --teal-dim:   #003d33;
+      --blue:       #82b1ff;
+      --green-dim:  #003300;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); transition: background .2s, color .2s; overflow: hidden; }
 
     header {
       display: flex; align-items: center;
@@ -41,7 +103,7 @@
     .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
     nav { display: flex; gap: 2px; margin-right: auto; margin-left: 24px; }
     .nav-link { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; }
-    .nav-link.active { color: var(--accent); background: rgba(249,115,22,.08); }
+    .nav-link.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
     #user-nav { display: flex; align-items: center; margin-left: 16px; }
 
     /* ── Layout ── */
@@ -72,8 +134,8 @@
     .hh-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
     .hh-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
     .hh-role { display: inline-block; padding: 1px 5px; border-radius: 2px; font-size: 9px; letter-spacing: .04em; margin-left: 6px; }
-    .hh-role.admin { background: rgba(249,115,22,.15); color: var(--accent); }
-    .hh-role.member { background: rgba(107,114,128,.1); color: var(--text-dim); }
+    .hh-role.admin { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+    .hh-role.member { background: color-mix(in srgb, var(--text-dim) 12%, transparent); color: var(--text-dim); }
 
     /* Join section */
     .join-section {
@@ -215,6 +277,18 @@
     .modal-btns { display: flex; gap: 10px; }
     .modal-msg { font-family: var(--mono); font-size: 11px; padding: 8px 10px; border-radius: 3px; margin-bottom: 12px; }
     .modal-msg.err { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
+    .theme-toggle {
+      display: flex; align-items: center;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; overflow: hidden; margin-left: 12px; flex-shrink: 0;
+    }
+    .theme-btn {
+      padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      transition: background .15s, color .15s; line-height: 1;
+    }
+    .theme-btn.active { background: var(--accent); color: #fff; }
+    .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
   </style>
 </head>
 <body>
@@ -759,6 +833,19 @@
   function formatCode(code) {
     return code.slice(0,4) + '-' + code.slice(4);
   }
+</script>
+<script>
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('basket-theme', t);
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.t === t);
+    });
+  }
+  (function() {
+    var t = document.documentElement.getAttribute('data-theme') || 'dark';
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  })();
 </script>
 </body>
 </html>

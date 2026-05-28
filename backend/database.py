@@ -33,6 +33,8 @@ def _migrate():
         ("recipes",       "instructions",  "TEXT"),
         ("recipes",       "source_url",    "VARCHAR"),
         ("recipes",       "user_id",       "INTEGER REFERENCES users(id)"),
+        ("users",         "email",         "VARCHAR"),
+        ("users",         "email_verified","BOOLEAN DEFAULT FALSE"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in new_columns:

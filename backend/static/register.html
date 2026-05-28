@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basket — Register</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script>
+    (function() {
+      var t = localStorage.getItem('basket-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        /* ── Dark (default) ── */
+    :root, [data-theme="dark"] {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #3d4249;
+      --text:       #e2e4e7;
+      --text-dim:   #9ca3af;
+      --text-muted: #6b7280;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --purple-dim: #3b2a6e;
+      --teal:       #2dd4bf;
+      --teal-dim:   #134e4a;
+      --blue:       #60a5fa;
+      --green-dim:  #14532d;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+
+    /* ── Light ── */
+    [data-theme="light"] {
+      --bg:         #f3f4f6;
+      --surface:    #ffffff;
+      --surface2:   #f0f2f4;
+      --surface3:   #e5e7eb;
+      --border:     #d1d5db;
+      --border2:    #bbc0c8;
+      --text:       #111827;
+      --text-dim:   #374151;
+      --text-muted: #6b7280;
+      --accent:     #c2550d;
+      --accent-dim: #fff0e6;
+      --green:      #15803d;
+      --yellow:     #92700a;
+      --red:        #b91c1c;
+      --purple:     #6d28d9;
+      --purple-dim: #ede9fe;
+      --teal:       #0f766e;
+      --teal-dim:   #ccfbf1;
+      --blue:       #1d4ed8;
+      --green-dim:  #dcfce7;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+
+    /* ── High contrast ── */
+    [data-theme="hc"] {
+      --bg:         #000000;
+      --surface:    #0a0a0a;
+      --surface2:   #141414;
+      --surface3:   #1e1e1e;
+      --border:     #6b6b6b;
+      --border2:    #999999;
+      --text:       #ffffff;
+      --text-dim:   #e0e0e0;
+      --text-muted: #b0b0b0;
+      --accent:     #ffaa00;
+      --accent-dim: #3a2700;
+      --green:      #00e676;
+      --yellow:     #ffee58;
+      --red:        #ff5252;
+      --purple:     #d0bcff;
+      --purple-dim: #1a1030;
+      --teal:       #64ffda;
+      --teal-dim:   #003d33;
+      --blue:       #82b1ff;
+      --green-dim:  #003300;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      margin-bottom: 32px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .logo-mark {
+      width: 26px; height: 26px;
+      border: 1.5px solid var(--accent);
+      display: grid; place-items: center;
+    }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    h1 {
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      margin-bottom: 18px;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: var(--accent); }
+    .pw-wrap { position: relative; margin-bottom: 18px; }
+    .pw-wrap input { margin-bottom: 0; }
+    .pw-wrap input[type="text"],
+    .pw-wrap input[type="password"] { margin-bottom: 0; padding-right: 40px; }
+    .pw-toggle {
+      position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; padding: 0;
+      color: var(--text-muted); line-height: 1;
+    }
+    .pw-toggle:hover { color: var(--text-dim); }
+    button[type="submit"] {
+      width: 100%;
+      padding: 11px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: opacity .15s;
+    }
+    button[type="submit"]:hover { opacity: .88; }
+    button[type="submit"]:disabled { opacity: .5; cursor: default; }
+    .msg {
+      display: none;
+      margin-top: 16px;
+      padding: 10px 12px;
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    .msg.err { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: var(--red); }
+    .msg.ok  { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: var(--green); }
+    .footer-link {
+      margin-top: 24px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .05em;
+      color: var(--text-dim);
+    }
+    .footer-link a { color: var(--accent); text-decoration: none; }
+    .footer-link a:hover { text-decoration: underline; }
+    .theme-toggle {
+      position: fixed; top: 12px; right: 16px;
+      display: flex; align-items: center;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; overflow: hidden; z-index: 100;
+    }
+    .theme-btn {
+      padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      transition: background .15s, color .15s; line-height: 1;
+    }
+    .theme-btn.active { background: var(--accent); color: #fff; }
+    .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle">
+    <button class="theme-btn" data-t="dark"  onclick="setTheme('dark')">DARK</button>
+    <button class="theme-btn" data-t="light" onclick="setTheme('light')">LIGHT</button>
+    <button class="theme-btn" data-t="hc"    onclick="setTheme('hc')">HC</button>
+  </div>
+  <div class="card">
+    <a class="logo" href="/login">
+      <div class="logo-mark">
+        <svg viewBox="0 0 16 16"><path d="M2 2h12l-1.5 9H3.5L2 2zm3 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+      </div>
+      <span>BASKET</span>
+    </a>
+    <h1>Create Account</h1>
+
+    <form id="reg-form" autocomplete="on">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" autofocus required
+             placeholder="3–32 chars, letters/numbers/_-">
+
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email" autocomplete="email" required>
+
+      <label for="display_name">Display Name <span style="color:var(--text-muted)">(optional)</span></label>
+      <input type="text" id="display_name" name="display_name" autocomplete="name">
+
+      <label for="password">Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="min 8 characters">
+        <button type="button" class="pw-toggle" onclick="togglePw('password', this)" tabindex="-1" aria-label="Show password">
+          <svg id="eye-password" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+
+      <label for="password2">Confirm Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="password2" name="password2" autocomplete="new-password" required placeholder="repeat password">
+        <button type="button" class="pw-toggle" onclick="togglePw('password2', this)" tabindex="-1" aria-label="Show password">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+
+      <button type="submit" id="submit-btn">Request Account</button>
+      <div id="msg" class="msg"></div>
+    </form>
+
+    <div class="footer-link">Already have an account? <a href="/login">Sign in</a></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('reg-form');
+    const btn  = document.getElementById('submit-btn');
+    const msg  = document.getElementById('msg');
+
+    function showMsg(type, text) {
+      msg.className = 'msg ' + type;
+      msg.textContent = text;
+      msg.style.display = 'block';
+    }
+
+    function showSuccess(email) {
+      const card = document.querySelector('.card');
+      card.innerHTML = `
+        <div class="logo" style="margin-bottom:24px;">
+          <div class="logo-mark">
+            <svg viewBox="0 0 16 16"><path d="M2 2h12l-1.5 9H3.5L2 2zm3 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+          </div>
+          <span>BASKET</span>
+        </div>
+        <h1 style="margin-bottom:16px;">Check your email</h1>
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:24px;">
+          A verification link has been sent to <strong style="color:var(--text);">${email}</strong>.<br>
+          Click it to confirm your address — your account will then await admin approval.
+        </p>
+        <div id="resend-msg" class="msg" style="display:none;margin-bottom:12px;"></div>
+        <button id="resend-btn" onclick="resend('${email}')"
+          style="width:100%;padding:11px;background:transparent;border:1px solid var(--border2);border-radius:3px;
+                 font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+                 color:var(--text-dim);cursor:pointer;transition:border-color .15s,color .15s;">
+          Resend verification email
+        </button>
+        <div class="footer-link" style="margin-top:20px;">Already verified? <a href="/login">Sign in</a></div>
+      `;
+    }
+
+    async function resend(email) {
+      const btn = document.getElementById('resend-btn');
+      const rmsg = document.getElementById('resend-msg');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      rmsg.style.display = 'none';
+
+      try {
+        const res  = await fetch('/auth/resend-verification', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          rmsg.className = 'msg ok';
+          rmsg.textContent = 'Sent! Check your inbox.';
+          btn.textContent = 'Resend verification email';
+          // Cool down: disable for 60s
+          let secs = 60;
+          const iv = setInterval(() => {
+            secs--;
+            btn.textContent = `Resend again in ${secs}s`;
+            if (secs <= 0) { clearInterval(iv); btn.disabled = false; btn.textContent = 'Resend verification email'; }
+          }, 1000);
+        } else {
+          rmsg.className = 'msg err';
+          rmsg.textContent = data.detail || 'Failed to resend. Try again later.';
+          btn.disabled = false;
+          btn.textContent = 'Resend verification email';
+        }
+      } catch {
+        rmsg.className = 'msg err';
+        rmsg.textContent = 'Network error. Try again.';
+        btn.disabled = false;
+        btn.textContent = 'Resend verification email';
+      }
+      rmsg.style.display = 'block';
+    }
+
+    function togglePw(id, btn) {
+      const inp = document.getElementById(id);
+      const showing = inp.type === 'text';
+      inp.type = showing ? 'password' : 'text';
+      btn.style.color = showing ? '' : 'var(--accent)';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.style.display = 'none';
+
+      const password  = document.getElementById('password').value;
+      const password2 = document.getElementById('password2').value;
+      if (password !== password2) {
+        showMsg('err', 'Passwords do not match.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      const body = {
+        username:     document.getElementById('username').value.trim(),
+        email:        document.getElementById('email').value.trim(),
+        display_name: document.getElementById('display_name').value.trim(),
+        password,
+      };
+
+      try {
+        const res  = await fetch('/auth/register', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+          form.style.display = 'none';
+          showSuccess(body.email);
+        } else {
+          showMsg('err', data.detail || 'Registration failed.');
+        }
+      } catch {
+        showMsg('err', 'Network error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Request Account';
+      }
+    });
+  </script>
+</body>
+</html>
