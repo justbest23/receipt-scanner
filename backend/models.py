@@ -18,6 +18,7 @@ class User(Base):
     is_admin       = Column(Boolean, default=False, nullable=False)
     is_active      = Column(Boolean, default=True, nullable=False)
     permissions    = Column(JSON, default=list)
+    currency       = Column(String, default="ZAR")
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
 
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
