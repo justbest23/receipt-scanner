@@ -316,6 +316,43 @@
     .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
   </style>
   <link rel="stylesheet" href="/static/mobile.css">
+  <style>
+    /* ── History page mobile overrides (after mobile.css so these win) ── */
+    @media (max-width: 768px) {
+      html, body { overflow: auto !important; height: auto !important; }
+      .workspace  { display: block !important; height: auto !important; overflow: visible !important; }
+
+      /* List takes full viewport */
+      .list-panel {
+        display: flex !important; flex-direction: column !important;
+        width: 100% !important; height: calc(100svh - 52px) !important;
+        border-right: none !important; overflow: hidden !important;
+      }
+
+      /* Detail panel hidden until a receipt is selected */
+      .detail-panel {
+        position: fixed !important; inset: 52px 0 0 0 !important;
+        height: calc(100svh - 52px) !important; display: none !important;
+        flex-direction: column !important; overflow: hidden !important;
+        background: var(--bg) !important; z-index: 50 !important;
+      }
+      body.mob-detail-open .detail-panel { display: flex !important; }
+
+      /* Back button visible on mobile */
+      .mob-back-btn { display: flex !important; }
+
+      /* Compact detail toolbar on small screens */
+      .detail-toolbar { flex-wrap: wrap; gap: 6px; padding: 8px 12px !important; }
+      .detail-title   { width: 100%; font-size: 11px !important; }
+      .btn-save, .btn-delete { padding: 6px 12px !important; font-size: 10px !important; }
+
+      /* Meta grid: 2 cols instead of 3-4 */
+      .meta-grid, .meta-grid.wide { grid-template-columns: 1fr 1fr !important; }
+
+      /* Item rows: don't overflow */
+      .item-row { overflow: visible !important; }
+    }
+  </style>
 </head>
 <body>
 
