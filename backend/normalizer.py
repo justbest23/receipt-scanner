@@ -31,7 +31,7 @@ Rules:
 - For prepared/branded foods keep concise: "Lay's Chips" → "Chips"
 
 Return ONLY a valid JSON object, no explanation, no markdown:
-{"original name": "canonical name", ...}
+{{"original name": "canonical name", ...}}
 
 Product names to normalize:
 {names}
@@ -63,12 +63,21 @@ def normalize_names(names: list[str]) -> dict[str, str]:
     try:
         resp = client.messages.create(
             model=os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
-            max_tokens=1024,
+            max_tokens=4096,
             messages=[{"role": "user", "content": _PROMPT.format(names=names_text)}],
         )
         raw = resp.content[0].text.strip()
-        clean = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        # Strip markdown fences robustly
+        import re
+        clean = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
+        clean = re.sub(r'\s*```\s*$', '', clean, flags=re.MULTILINE).strip()
+        # Extract first JSON object if there's surrounding text
+        m = re.search(r'\{[\s\S]*\}', clean)
+        if m:
+            clean = m.group(0)
         mapping: dict[str, str] = json.loads(clean)
+        if not isinstance(mapping, dict):
+            raise ValueError(f"Expected dict, got {type(mapping)}")
         # Return mapping for all original names (deduped result covers duplicates)
         return {n: mapping.get(n, n) for n in names}
     except Exception as e:

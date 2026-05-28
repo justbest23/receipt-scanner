@@ -1053,6 +1053,7 @@ def receipt_price_history(
             models.ReceiptItem.canonical_name.isnot(None),
             models.ReceiptItem.canonical_name.ilike(f"%{q}%"),
             models.ReceiptItem.total_price.isnot(None),
+            models.ReceiptItem.total_price > 0,
         )
         .order_by(models.Receipt.created_at.desc())
         .limit(50)
@@ -1367,6 +1368,7 @@ def shopping_list(
                 models.ReceiptItem.canonical_name.isnot(None),
                 models.ReceiptItem.canonical_name.ilike(f"%{query}%"),
                 models.ReceiptItem.total_price.isnot(None),
+                models.ReceiptItem.total_price > 0,
             )
             .order_by(models.Receipt.created_at.desc())
             .limit(20)
