@@ -275,9 +275,51 @@
     window.location.href = LOGIN;
   };
 
+  function setupMobileNav() {
+    const headerEl = document.querySelector('header');
+    const navEl    = document.querySelector('header nav');
+    if (!headerEl || !navEl) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'mob-nav-btn';
+    btn.setAttribute('aria-label', 'Menu');
+    btn.innerHTML =
+      '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">' +
+      '<line x1="2" y1="4.5" x2="16" y2="4.5"/>' +
+      '<line x1="2" y1="9" x2="16" y2="9"/>' +
+      '<line x1="2" y1="13.5" x2="16" y2="13.5"/>' +
+      '</svg>';
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const open = navEl.classList.toggle('mob-open');
+      btn.classList.toggle('mob-open', open);
+    });
+
+    navEl.addEventListener('click', function(e) {
+      if (e.target.closest('a')) {
+        navEl.classList.remove('mob-open');
+        btn.classList.remove('mob-open');
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!headerEl.contains(e.target)) {
+        navEl.classList.remove('mob-open');
+        btn.classList.remove('mob-open');
+      }
+    });
+
+    // Insert hamburger right after the logo (first child), before the nav
+    const logoEl = headerEl.querySelector('.logo, a:first-child');
+    if (logoEl) logoEl.after(btn);
+    else headerEl.insertBefore(btn, navEl);
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     injectStyles();
     injectModal();
+    setupMobileNav();
     initAuth();
   });
 })();

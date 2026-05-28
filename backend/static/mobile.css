@@ -1,0 +1,193 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   mobile.css  —  Responsive breakpoints for Basket
+   Included on all pages after the page's own <style> block.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Hamburger button (injected by auth.js, hidden on desktop) ── */
+#mob-nav-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 6px 8px;
+  color: var(--text-dim);
+  margin-left: 16px;
+  flex-shrink: 0;
+  align-items: center;
+  transition: color .15s, border-color .15s;
+}
+#mob-nav-btn.mob-open { color: var(--accent); border-color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  TABLET + PHONE  (≤ 900px)                                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+
+  /* ── Header: hamburger visible, nav collapses to dropdown ── */
+  #mob-nav-btn { display: flex !important; }
+
+  header nav {
+    display: none !important;
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    flex-direction: column !important;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 8px 10px;
+    z-index: 300;
+    box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    gap: 2px !important;
+    margin-left: 0 !important;
+  }
+  header nav.mob-open { display: flex !important; }
+
+  /* nav link overrides for dropdown */
+  header nav a,
+  header nav .nav-link {
+    padding: 11px 16px !important;
+    font-size: 12px !important;
+    border-radius: 3px;
+    display: block;
+  }
+
+  /* Compact theme toggle */
+  .theme-btn { padding: 5px 8px !important; font-size: 9px !important; }
+
+  /* Compact user-nav */
+  #user-nav { gap: 5px !important; }
+
+  /* Header padding reduced */
+  header { padding: 0 14px !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  PHONE  (≤ 600px)                                                          */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  /* ── Profile modal full-width ── */
+  #profile-modal { max-width: calc(100vw - 24px) !important; padding: 20px 16px 16px !important; }
+
+  /* ── Login / Register card ── */
+  .card {
+    margin: 16px !important;
+    padding: 28px 20px !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
+  /* Floating theme toggle (login/register) */
+  .theme-toggle-float {
+    top: 10px !important;
+    right: 10px !important;
+  }
+
+  /* ── index.html: 3-col workspace → single column ── */
+  .workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 52px);
+    overflow: visible !important;
+  }
+
+  /* Each panel in index.html and meals.html */
+  .workspace > div, .workspace > .panel {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    flex-shrink: 0;
+  }
+
+  /* ── household.html sidebar + main ── */
+  .sidebar {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 240px;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ── index.html upload zone ── */
+  #upload-zone { min-height: 100px !important; }
+
+  /* ── analytics.html filter bar ── */
+  .filter-bar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 10px !important;
+    height: auto !important;
+    min-height: unset !important;
+  }
+  .filter-bar > * { flex-shrink: 0; }
+  #search-input { width: 100% !important; min-width: 0 !important; }
+  .filter-bar select,
+  .filter-bar input[type="date"] { width: calc(50% - 3px); min-width: 0; }
+
+  /* ── analytics.html chip bar ── */
+  .chip-bar { flex-wrap: wrap !important; padding: 6px 10px !important; }
+
+  /* ── analytics / history / admin tables: horizontal scroll ── */
+  .section { overflow: visible !important; }
+  table, .hist-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+
+  /* ── analytics summary two-col: already has 900px breakpoint, keep ── */
+
+  /* ── history.html detail panel ── */
+  #detail-panel {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    height: 70vh !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border) !important;
+    z-index: 200;
+  }
+
+  /* ── meals.html panels ── */
+  .panel { min-height: 200px; }
+  .panel:last-child { border-bottom: none !important; }
+
+  /* ── admin.html form grid ── */
+  .form-grid { grid-template-columns: 1fr !important; }
+
+  /* ── spend-groups.html ── */
+  .sg-grid, .group-grid { grid-template-columns: 1fr !important; }
+
+  /* Override overflow:hidden on body so the stacked workspace can scroll */
+  html, body { overflow: auto !important; height: auto !important; }
+
+  /* history.html: 2-col grid → stacked */
+  .list-panel {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    height: 50vh !important;
+    overflow: auto !important;
+    flex-direction: column;
+  }
+  .detail-panel {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border);
+    overflow: auto !important;
+  }
+
+  /* panels in index.html / meals.html need their own scroll */
+  .panel { overflow: auto !important; min-height: 220px; }
+
+  /* General content padding */
+  .main { padding: 14px !important; }
+
+  /* Prevent long words from breaking layout */
+  td, th, .name, .store-name { word-break: break-word; }
+}
