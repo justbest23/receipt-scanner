@@ -176,8 +176,8 @@ export default function RecipeDetailScreen() {
                   </View>
                 )}
               </View>
-              <Text style={[s.shopPrice, best?.stale && s.shopPriceStale]}>
-                {best?.price != null ? `R ${best.price.toFixed(2)}` : '—'}
+              <Text style={best?.stale ? [s.shopPrice, s.shopPriceStale] : s.shopPrice}>
+                {best?.price != null ? `R ${(best.price as number).toFixed(2)}` : '—'}
               </Text>
             </View>
           );

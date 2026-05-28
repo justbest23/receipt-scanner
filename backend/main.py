@@ -27,6 +27,7 @@ Meal planning:
 import asyncio
 import io
 import os
+import re
 import secrets
 import uuid
 import logging
@@ -1051,7 +1052,7 @@ def receipt_price_history(
         .filter(
             models.Receipt.user_id == user.id,
             models.ReceiptItem.canonical_name.isnot(None),
-            models.ReceiptItem.canonical_name.ilike(f"%{q}%"),
+            models.ReceiptItem.canonical_name.ilike(q),
             models.ReceiptItem.total_price.isnot(None),
             models.ReceiptItem.total_price > 0,
         )
@@ -1415,7 +1416,8 @@ def shopping_list(
             .filter(
                 models.Receipt.user_id == user.id,
                 models.ReceiptItem.canonical_name.isnot(None),
-                models.ReceiptItem.canonical_name.ilike(f"%{query}%"),
+                # Exact match OR starts-with (e.g. "Milk" matches "Milk" but not "Milk Tart")
+                models.ReceiptItem.canonical_name.ilike(query),
                 models.ReceiptItem.total_price.isnot(None),
                 models.ReceiptItem.total_price > 0,
             )
