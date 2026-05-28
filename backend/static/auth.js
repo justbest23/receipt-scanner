@@ -128,6 +128,16 @@
           <button class="pm-btn-cancel" onclick="window.__pmClose()">Cancel</button>
           <span class="pm-msg" id="pm-msg"></span>
         </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <a href="/download/apk" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+            letter-spacing:.05em;color:var(--text-dim);text-decoration:none;padding:6px 12px;border:1px solid var(--border2);
+            border-radius:3px;transition:border-color .15s,color .15s;"
+            onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+            onmouseout="this.style.borderColor='';this.style.color=''">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.5L2 4.5h3V1h2v3.5h3L6 8.5zM1 10h10v1H1v-1z"/></svg>
+            Download Android APK
+          </a>
+        </div>
       </div>`;
     document.body.appendChild(div);
     div.addEventListener('click', e => { if (e.target === div) window.__pmClose(); });
@@ -291,7 +301,7 @@
       'display:flex;align-items:center;gap:10px;padding:10px 14px;z-index:9000;font-family:var(--mono);font-size:11px;';
     bar.innerHTML =
       '<span style="flex:1;color:var(--text-dim)">Install <strong style="color:var(--text)">Basket</strong> app on Android</span>' +
-      '<a href="/static/basket.apk" download="basket.apk" style="padding:7px 14px;background:var(--accent);color:#000;' +
+      '<a href="/download/apk" style="padding:7px 14px;background:var(--accent);color:#000;' +
       'font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-decoration:none;border-radius:2px;white-space:nowrap;">' +
       '⬇ Download APK</a>' +
       '<button onclick="document.getElementById(\'install-bar\').remove();sessionStorage.setItem(\'install-dismissed\',1)" ' +

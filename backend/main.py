@@ -163,6 +163,16 @@ def startup():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+@app.get("/download/apk")
+def download_apk():
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        "static/basket.apk",
+        media_type="application/vnd.android.package-archive",
+        headers={"Content-Disposition": 'attachment; filename="basket.apk"'},
+    )
+
+
 def _session_user(request: Request, db: Session):
     """Return User if session cookie is valid, else None."""
     token = request.cookies.get("session")
