@@ -16,8 +16,8 @@ import models
 logger = logging.getLogger(__name__)
 
 CACHE_HOURS  = 12
-ONLINE_STORES = ["checkers", "woolworths", "pnp", "spar"]
-ALL_STORES    = ONLINE_STORES + ["uitkyk"]
+ONLINE_STORES = ["uitkyk", "checkers", "woolworths", "pnp", "spar"]
+ALL_STORES    = ONLINE_STORES
 
 
 # ── Cache helpers ──────────────────────────────────────────────────────────────
@@ -77,6 +77,9 @@ def save_results(query: str, store: str, results: list, db: Session):
 # ── Scraping ───────────────────────────────────────────────────────────────────
 
 def _get_scraper(store: str):
+    if store == "uitkyk":
+        from scrapers.uitkyk import UitkykScraper
+        return UitkykScraper()
     if store == "checkers":
         from scrapers.checkers import CheckersScraper
         return CheckersScraper()
