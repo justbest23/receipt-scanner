@@ -1,16 +1,50 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Image, TextInput } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
+  Alert, ScrollView, Image, TextInput, Switch,
+} from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { api } from '../api/client';
 import { COLORS } from '../theme';
 
 type Stage = 'idle' | 'scanning' | 'review' | 'saving';
 
+type Item = {
+  name: string;
+  receipt_name?: string;
+  quantity: string;
+  unit_price: string;
+  total_price: string;
+  vat_applicable: boolean;
+  category?: string;
+};
+
+function blankItem(): Item {
+  return { name: '', quantity: '1', unit_price: '', total_price: '', vat_applicable: true };
+}
+
+function resultToItems(raw: any[]): Item[] {
+  return (raw || []).map(i => ({
+    name: i.name || i.receipt_name || '',
+    receipt_name: i.receipt_name,
+    quantity: String(i.quantity ?? 1),
+    unit_price: i.unit_price != null ? String(i.unit_price) : '',
+    total_price: i.total_price != null ? String(i.total_price) : '',
+    vat_applicable: i.vat_applicable !== false,
+    category: i.category,
+  }));
+}
+
 export default function ScanScreen() {
   const [stage, setStage] = useState<Stage>('idle');
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+
+  const [store, setStore] = useState('');
+  const [date, setDate] = useState('');
+  const [total, setTotal] = useState('');
+  const [currency, setCurrency] = useState('ZAR');
+  const [items, setItems] = useState<Item[]>([]);
 
   const pick = async (fromCamera: boolean) => {
     const fn = fromCamera ? launchCamera : launchImageLibrary;
@@ -22,7 +56,11 @@ export default function ScanScreen() {
     setError('');
     try {
       const data = await api.scan(asset.uri!, asset.type ?? 'image/jpeg', asset.fileName ?? 'receipt.jpg');
-      setResult(data);
+      setStore(data.store || '');
+      setDate(data.date || '');
+      setTotal(data.total != null ? String(data.total) : '');
+      setCurrency(data.currency || 'ZAR');
+      setItems(resultToItems(data.items));
       setStage('review');
     } catch (e: any) {
       setError(e.message || 'Scan failed');
@@ -33,10 +71,31 @@ export default function ScanScreen() {
   const confirm = async () => {
     setStage('saving');
     try {
-      await api.confirmReceipt(result);
-      setStage('idle');
-      setImageUri(null);
-      setResult(null);
+      const qty = (item: Item) => parseFloat(item.quantity) || 1;
+      const up = (item: Item) => item.unit_price !== '' ? parseFloat(item.unit_price) : undefined;
+      const tp = (item: Item) => {
+        if (item.total_price !== '') return parseFloat(item.total_price);
+        const u = up(item);
+        return u != null ? u * qty(item) : undefined;
+      };
+      const payload = {
+        store: store.trim() || null,
+        date: date.trim() || null,
+        total: total !== '' ? parseFloat(total) : null,
+        currency: currency.trim() || 'ZAR',
+        items: items.map(i => ({
+          name: i.name || 'Unknown',
+          receipt_name: i.receipt_name || i.name,
+          category: i.category,
+          quantity: qty(i),
+          unit_type: 'unit',
+          unit_price: up(i),
+          total_price: tp(i),
+          vat_applicable: i.vat_applicable,
+        })),
+      };
+      await api.confirmReceipt(payload);
+      reset();
       Alert.alert('Saved', 'Receipt saved to your history.');
     } catch (e: any) {
       setError(e.message || 'Save failed');
@@ -44,7 +103,16 @@ export default function ScanScreen() {
     }
   };
 
-  const reset = () => { setStage('idle'); setImageUri(null); setResult(null); setError(''); };
+  const reset = () => {
+    setStage('idle');
+    setImageUri(null);
+    setStore(''); setDate(''); setTotal(''); setCurrency('ZAR'); setItems([]);
+    setError('');
+  };
+
+  const updateItem = (idx: number, patch: Partial<Item>) => {
+    setItems(prev => prev.map((item, i) => i === idx ? { ...item, ...patch } : item));
+  };
 
   if (stage === 'scanning') {
     return (
@@ -56,9 +124,9 @@ export default function ScanScreen() {
     );
   }
 
-  if (stage === 'review' && result) {
+  if (stage === 'review' || stage === 'saving') {
     return (
-      <ScrollView style={s.root} contentContainerStyle={s.reviewContent}>
+      <ScrollView style={s.root} contentContainerStyle={s.reviewContent} keyboardShouldPersistTaps="handled">
         <View style={s.reviewHeader}>
           <Text style={s.reviewTitle}>Review Receipt</Text>
           <TouchableOpacity onPress={reset}><Text style={s.linkText}>Discard</Text></TouchableOpacity>
@@ -66,27 +134,74 @@ export default function ScanScreen() {
 
         {imageUri && <Image source={{ uri: imageUri }} style={s.previewImg} resizeMode="contain" />}
 
+        {/* Editable header */}
         <View style={s.metaCard}>
-          <Row label="Store" value={result.store || 'Unknown'} />
-          <Row label="Date" value={result.date || '—'} />
-          <Row label="Total" value={result.total != null ? `R ${result.total.toFixed(2)}` : '—'} accent />
+          <Text style={s.cardSectionLabel}>Receipt Details</Text>
+          <Field label="Store" value={store} onChange={setStore} />
+          <Field label="Date" value={date} onChange={setDate} placeholder="YYYY-MM-DD" />
+          <View style={s.twoCol}>
+            <View style={{ flex: 2, marginRight: 8 }}>
+              <Field label="Total" value={total} onChange={setTotal} keyboardType="decimal-pad" placeholder="0.00" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label="Currency" value={currency} onChange={setCurrency} autoCapitalize="characters" />
+            </View>
+          </View>
         </View>
 
-        {(result.items || []).length > 0 && (
-          <View style={s.itemsCard}>
-            <Text style={s.sectionLabel}>Items ({result.items.length})</Text>
-            {result.items.map((item: any, i: number) => (
-              <View key={i} style={s.itemRow}>
-                <Text style={s.itemName} numberOfLines={2}>{item.name || item.receipt_name}</Text>
-                <Text style={s.itemPrice}>R {(item.total_price ?? item.unit_price ?? 0).toFixed(2)}</Text>
-              </View>
-            ))}
+        {/* Editable items */}
+        <View style={s.itemsCard}>
+          <View style={s.itemsCardHeader}>
+            <Text style={s.cardSectionLabel}>Items ({items.length})</Text>
+            <TouchableOpacity style={s.addBtn} onPress={() => setItems(prev => [...prev, blankItem()])}>
+              <Text style={s.addBtnText}>+ Add</Text>
+            </TouchableOpacity>
           </View>
-        )}
+
+          {items.map((item, idx) => (
+            <View key={idx} style={s.itemEdit}>
+              <View style={s.itemEditRow}>
+                <TextInput
+                  style={[s.itemInput, { flex: 1 }]}
+                  value={item.name}
+                  onChangeText={v => updateItem(idx, { name: v })}
+                  placeholder="Item name"
+                  placeholderTextColor={COLORS.textMuted}
+                />
+                <TouchableOpacity onPress={() => setItems(prev => prev.filter((_, i) => i !== idx))} style={s.delBtn}>
+                  <Text style={s.delBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={s.itemEditRow}>
+                <View style={s.miniField}>
+                  <Text style={s.miniLabel}>Qty</Text>
+                  <TextInput style={s.itemInput} value={item.quantity} onChangeText={v => updateItem(idx, { quantity: v })} keyboardType="decimal-pad" placeholderTextColor={COLORS.textMuted} />
+                </View>
+                <View style={s.miniField}>
+                  <Text style={s.miniLabel}>Unit Price</Text>
+                  <TextInput style={s.itemInput} value={item.unit_price} onChangeText={v => updateItem(idx, { unit_price: v })} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={COLORS.textMuted} />
+                </View>
+                <View style={s.miniField}>
+                  <Text style={s.miniLabel}>Total</Text>
+                  <TextInput style={s.itemInput} value={item.total_price} onChangeText={v => updateItem(idx, { total_price: v })} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={COLORS.textMuted} />
+                </View>
+              </View>
+              <View style={s.vatRow}>
+                <Text style={s.vatLabel}>VAT Applicable</Text>
+                <Switch
+                  value={item.vat_applicable}
+                  onValueChange={v => updateItem(idx, { vat_applicable: v })}
+                  trackColor={{ false: COLORS.surface2, true: COLORS.accent + '88' }}
+                  thumbColor={item.vat_applicable ? COLORS.accent : COLORS.textMuted}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
 
         {error ? <Text style={s.error}>{error}</Text> : null}
 
-        <TouchableOpacity style={s.confirmBtn} onPress={confirm} disabled={stage === 'saving'}>
+        <TouchableOpacity style={[s.confirmBtn, stage === 'saving' && s.btnDisabled]} onPress={confirm} disabled={stage === 'saving'}>
           {stage === 'saving'
             ? <ActivityIndicator color="#000" />
             : <Text style={s.confirmBtnText}>SAVE RECEIPT</Text>}
@@ -116,11 +231,20 @@ export default function ScanScreen() {
   );
 }
 
-function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Field({ label, value, onChange, placeholder, keyboardType, autoCapitalize }: any) {
   return (
-    <View style={s.metaRow}>
-      <Text style={s.metaLabel}>{label}</Text>
-      <Text style={[s.metaValue, accent && { color: COLORS.accent }]}>{value}</Text>
+    <View style={s.field}>
+      <Text style={s.fieldLabel}>{label}</Text>
+      <TextInput
+        style={s.fieldInput}
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={COLORS.textMuted}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize ?? 'words'}
+        autoCorrect={false}
+      />
     </View>
   );
 }
@@ -144,16 +268,27 @@ const s = StyleSheet.create({
   reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   reviewTitle: { color: COLORS.text, fontFamily: 'monospace', fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' },
   linkText: { color: COLORS.accent, fontFamily: 'monospace', fontSize: 11 },
-  previewImg: { width: '100%', height: 200, borderRadius: 4, backgroundColor: COLORS.surface2, marginBottom: 14 },
+  previewImg: { width: '100%', height: 180, borderRadius: 4, backgroundColor: COLORS.surface2, marginBottom: 14 },
   metaCard: { backgroundColor: COLORS.surface, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 12 },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-  metaLabel: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-  metaValue: { color: COLORS.text, fontFamily: 'monospace', fontSize: 12 },
+  cardSectionLabel: { color: COLORS.textDim, fontFamily: 'monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
+  field: { marginBottom: 10 },
+  fieldLabel: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  fieldInput: { backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border2, borderRadius: 3, color: COLORS.text, padding: 8, fontFamily: 'monospace', fontSize: 13 },
+  twoCol: { flexDirection: 'row' },
   itemsCard: { backgroundColor: COLORS.surface, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, padding: 14, marginBottom: 20 },
-  sectionLabel: { color: COLORS.textDim, fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  itemName: { color: COLORS.text, fontSize: 13, flex: 1, marginRight: 8 },
-  itemPrice: { color: COLORS.accent, fontFamily: 'monospace', fontSize: 12 },
+  itemsCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  addBtn: { borderWidth: 1, borderColor: COLORS.accent, borderRadius: 3, paddingHorizontal: 8, paddingVertical: 4 },
+  addBtnText: { color: COLORS.accent, fontFamily: 'monospace', fontSize: 10 },
+  itemEdit: { borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 8, gap: 6 },
+  itemEditRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  itemInput: { backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border2, borderRadius: 3, color: COLORS.text, padding: 7, fontFamily: 'monospace', fontSize: 12 },
+  delBtn: { paddingHorizontal: 8, paddingVertical: 6 },
+  delBtnText: { color: COLORS.red, fontSize: 16 },
+  miniField: { flex: 1 },
+  miniLabel: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 8, textTransform: 'uppercase', marginBottom: 3 },
+  vatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  vatLabel: { color: COLORS.textMuted, fontFamily: 'monospace', fontSize: 10 },
   confirmBtn: { backgroundColor: COLORS.accent, borderRadius: 4, padding: 16, alignItems: 'center' },
+  btnDisabled: { opacity: 0.5 },
   confirmBtnText: { color: '#000', fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 },
 });

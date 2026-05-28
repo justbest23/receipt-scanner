@@ -1,8 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from './api/client';
+import { api, loadStoredToken, clearToken } from './api/client';
 
-interface User { id: number; username: string; display_name: string; email: string; is_admin: boolean; currency: string; permissions: string[]; }
-interface AuthCtx { user: User | null; setUser: (u: User | null) => void; logout: () => Promise<void>; }
+interface User {
+  id: number;
+  username: string;
+  display_name: string;
+  email: string;
+  is_admin: boolean;
+  currency: string;
+  permissions: string[];
+}
+interface AuthCtx {
+  user: User | null;
+  setUser: (u: User | null) => void;
+  logout: () => Promise<void>;
+}
 
 const Ctx = createContext<AuthCtx>({ user: null, setUser: () => {}, logout: async () => {} });
 
@@ -11,11 +23,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
+    (async () => {
+      await loadStoredToken();
+      try {
+        const me = await api.me();
+        setUser(me);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const logout = async () => {
-    await api.logout().catch(() => {});
+    await api.logout();
+    clearToken();
     setUser(null);
   };
 

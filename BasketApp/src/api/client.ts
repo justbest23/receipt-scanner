@@ -1,10 +1,30 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const BASE = 'https://basket.trog.co.za';
+const TOKEN_KEY = 'session_token';
+
+let _token: string | null = null;
+
+export async function loadStoredToken() {
+  _token = await AsyncStorage.getItem(TOKEN_KEY);
+}
+
+export function clearToken() {
+  _token = null;
+  AsyncStorage.removeItem(TOKEN_KEY);
+}
 
 async function request(path: string, opts: RequestInit = {}) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(opts.headers as Record<string, string>),
+  };
+  if (_token) headers['Cookie'] = `session=${_token}`;
+
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Request failed' }));
@@ -15,9 +35,28 @@ async function request(path: string, opts: RequestInit = {}) {
 
 export const api = {
   // Auth
-  login: (username: string, password: string) =>
-    request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
-  logout: () => request('/auth/logout', { method: 'POST' }),
+  login: async (username: string, password: string) => {
+    const res = await fetch(`${BASE}/auth/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (data.token) {
+      _token = data.token;
+      await AsyncStorage.setItem(TOKEN_KEY, data.token);
+    }
+    return data;
+  },
+  logout: async () => {
+    await request('/auth/logout', { method: 'POST' }).catch(() => {});
+    clearToken();
+  },
   me: () => request('/auth/me'),
   updateProfile: (body: object) =>
     request('/auth/profile', { method: 'PATCH', body: JSON.stringify(body) }),
@@ -35,9 +74,12 @@ export const api = {
   scan: async (uri: string, type: string, name: string) => {
     const form = new FormData();
     form.append('file', { uri, type, name } as any);
+    const headers: Record<string, string> = {};
+    if (_token) headers['Cookie'] = `session=${_token}`;
     const res = await fetch(`${BASE}/scan`, {
       method: 'POST',
       credentials: 'include',
+      headers,
       body: form,
     });
     if (!res.ok) {

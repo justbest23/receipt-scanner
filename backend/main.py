@@ -511,7 +511,7 @@ def login(request: Request, payload: dict, db: Session = Depends(database.get_db
     )
     # Use Secure flag only when the client reached us over HTTPS (via reverse proxy)
     is_https = request.headers.get("x-forwarded-proto", "").lower() == "https"
-    response = JSONResponse({"ok": True, "username": user.username, "is_admin": user.is_admin})
+    response = JSONResponse({"ok": True, "username": user.username, "is_admin": user.is_admin, "token": token})
     response.set_cookie(
         "session", token,
         httponly=True,
