@@ -348,7 +348,7 @@
   <nav>
     <a class="nav-link" href="/">Receipts</a>
     <a class="nav-link" href="/history">History</a>
-    <a class="nav-link active" href="/prices">Prices</a>
+    <a class="nav-link active" href="/prices">Prices <span style="font-size:8px;opacity:.6">(WIP)</span></a>
     <a class="nav-link" href="/meals">Meal Plan</a>
     <a class="nav-link" href="/analytics">Insights</a>
     <a class="nav-link" href="/household">Household</a>
@@ -362,6 +362,10 @@
     <button class="theme-btn" data-t="hc"    onclick="setTheme('hc')">HC</button>
   </div>
 </header>
+
+<div style="background:color-mix(in srgb,var(--yellow) 10%,transparent);border-bottom:1px solid color-mix(in srgb,var(--yellow) 25%,transparent);padding:10px 24px;font-family:var(--mono);font-size:11px;color:var(--yellow);text-align:center;">
+  ⚠ Price scraping is currently being reworked — results may be unavailable or incomplete.
+</div>
 
 <div class="search-section">
   <div class="search-wrap">

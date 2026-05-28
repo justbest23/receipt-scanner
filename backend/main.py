@@ -525,6 +525,49 @@ def logout(request: Request, db: Session = Depends(database.get_db)):
     return response
 
 
+@app.patch("/auth/profile")
+def update_profile(
+    payload: dict,
+    user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    import re
+    from sqlalchemy import func as sqlfunc
+
+    if "display_name" in payload:
+        user.display_name = (payload["display_name"] or "").strip() or None
+
+    if "username" in payload:
+        new_un = (payload["username"] or "").strip().lower()
+        if new_un and new_un != user.username:
+            if not re.match(r"^[a-z0-9_\-]{3,32}$", new_un):
+                raise HTTPException(400, "Username must be 3–32 characters: letters, numbers, _ or -")
+            if db.query(models.User).filter(sqlfunc.lower(models.User.username) == new_un, models.User.id != user.id).first():
+                raise HTTPException(409, "Username already taken")
+            user.username = new_un
+
+    if "email" in payload:
+        new_email = (payload["email"] or "").strip().lower()
+        if new_email and new_email != (user.email or ""):
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", new_email):
+                raise HTTPException(400, "Invalid email address")
+            if db.query(models.User).filter(sqlfunc.lower(models.User.email) == new_email, models.User.id != user.id).first():
+                raise HTTPException(409, "Email already in use")
+            user.email = new_email
+
+    if "password" in payload:
+        pw = (payload["password"] or "").strip()
+        if pw:
+            if len(pw) < 8:
+                raise HTTPException(400, "Password must be at least 8 characters")
+            user.password_hash = auth.hash_password(pw)
+
+    db.commit()
+    db.refresh(user)
+    logger.info(f"User '{user.username}' updated their profile")
+    return _user_dict(user)
+
+
 @app.get("/auth/me")
 def auth_me(user: models.User = Depends(auth.get_current_user)):
     return {
