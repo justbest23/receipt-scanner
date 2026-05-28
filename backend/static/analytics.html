@@ -208,6 +208,28 @@
     .surface-box { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
 
     select option { background: var(--surface2); }
+
+    /* ── Clickable bars ── */
+    .bar-row { cursor: pointer; border-radius: 3px; padding: 4px 6px; margin: 0 -6px; transition: background .12s; }
+    .bar-row:hover { background: var(--surface2); }
+    .bar-row:hover .bar-name { color: var(--accent); }
+
+    /* ── Active filter chips ── */
+    .chip-bar {
+      display: none; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 7px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .chip-bar.has-chips { display: flex; }
+    .chip-label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 8px; background: color-mix(in srgb, var(--accent) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: 20px; font-family: var(--mono); font-size: 10px; color: var(--accent);
+      cursor: pointer; transition: background .12s;
+    }
+    .chip:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+    .chip-x { font-size: 12px; line-height: 1; opacity: .7; }
     .theme-toggle {
       display: flex; align-items: center;
       background: var(--surface2); border: 1px solid var(--border2);
@@ -272,6 +294,11 @@
   <span class="mode-indicator" id="mode-indicator">OVERVIEW</span>
 </div>
 
+<div class="chip-bar" id="chip-bar">
+  <span class="chip-label">Filtered by</span>
+  <span id="chip-container"></span>
+</div>
+
 <div class="main" id="main-content">
   <div class="empty loading">Loading…</div>
 </div>
@@ -317,7 +344,7 @@ function renderHistory() {
         `<tr>
           <td class="mono-val">${h.date||'—'}</td>
           <td>${esc(h.store)}</td>
-          <td style="color:var(--text-dim);font-size:12px">${esc(h.name)}</td>
+          <td style="color:var(--text-dim);font-size:12px;cursor:pointer;" onclick="drillItem('${esc(h.name)}')" title="Search for ${esc(h.name)}">${esc(h.name)}</td>
           <td class="mono-val">${h.quantity??1}</td>
           <td class="mono-val">${h.unit_price!=null?'R '+fmt(h.unit_price):'—'}</td>
           <td class="mono-val">${h.total_price!=null?'R '+fmt(h.total_price):'—'}</td>
@@ -340,6 +367,20 @@ function params() {
   return p;
 }
 
+// ── Drill-down helpers ────────────────────────────────────────────────────────
+function drillCategory(cat) {
+  ge('cat-select').value = cat;
+  run();
+}
+function drillStore(store) {
+  ge('store-select').value = store;
+  run();
+}
+function drillItem(name) {
+  ge('search-input').value = name;
+  run();
+}
+
 function clearFilters() {
   ge('search-input').value = '';
   ge('from-date').value    = '';
@@ -348,6 +389,31 @@ function clearFilters() {
   ge('store-select').value = '';
   run();
 }
+
+function updateChips() {
+  const q  = ge('search-input').value.trim();
+  const fd = ge('from-date').value;
+  const td = ge('to-date').value;
+  const ct = ge('cat-select').value;
+  const st = ge('store-select').value;
+  const chips = [];
+  if (q)  chips.push({ label: `item: "${q}"`,  clear: () => { ge('search-input').value = ''; run(); } });
+  if (ct) chips.push({ label: `cat: ${ct}`,     clear: () => { ge('cat-select').value = ''; run(); } });
+  if (st) chips.push({ label: `store: ${st}`,   clear: () => { ge('store-select').value = ''; run(); } });
+  if (fd) chips.push({ label: `from: ${fd}`,    clear: () => { ge('from-date').value = ''; run(); } });
+  if (td) chips.push({ label: `to: ${td}`,      clear: () => { ge('to-date').value = ''; run(); } });
+
+  const bar = ge('chip-bar');
+  const con = ge('chip-container');
+  if (!chips.length) { bar.classList.remove('has-chips'); return; }
+  bar.classList.add('has-chips');
+  con.innerHTML = chips.map((c, i) =>
+    `<span class="chip" onclick="window.__chipClear(${i})">
+      ${esc(c.label)} <span class="chip-x">×</span>
+    </span>`).join('');
+  window.__chipClearFns = chips.map(c => c.clear);
+}
+window.__chipClear = i => window.__chipClearFns[i]();
 
 async function run() {
   const q  = ge('search-input').value.trim();
@@ -364,6 +430,7 @@ async function run() {
   ge('mode-indicator').textContent = label;
   sortCol = null; sortDir = 1; historyData = [];
 
+  updateChips();
   ge('main-content').innerHTML = '<div class="empty loading">Loading…</div>';
 
   if (hasFilter) {
@@ -411,12 +478,12 @@ function renderItemSearch(d) {
 
     <div class="two-col">
       <div class="section">
-        <div class="section-head">By Store</div>
+        <div class="section-head">By Store <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click to add filter ↓</span></div>
         ${d.by_store.length === 0 ? '<div class="empty" style="padding:24px">No data</div>' : `
         <div class="bar-list">
           ${d.by_store.map(row => `
-            <div class="bar-row">
-              <div class="bar-name" title="${esc(row.store)}">${esc(row.store)}</div>
+            <div class="bar-row" onclick="drillStore('${esc(row.store)}')" title="Filter to ${esc(row.store)}">
+              <div class="bar-name">${esc(row.store)}</div>
               <div class="bar-track"><div class="bar-fill" style="width:${pct(row.total, maxStoreTotal)}%"></div></div>
               <div class="bar-meta">${row.count}× &nbsp; R ${fmt(row.total)} &nbsp; <span style="color:var(--text-muted)">avg R ${fmt(row.avg_price)}</span></div>
             </div>`).join('')}
@@ -469,12 +536,12 @@ function renderSummary(d) {
 
       <div>
         <div class="section">
-          <div class="section-head">Spend by Category</div>
+          <div class="section-head">Spend by Category <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click to filter ↓</span></div>
           ${d.by_category.length === 0 ? '<div class="empty" style="padding:24px">No data yet</div>' : `
           <div class="bar-list">
             ${d.by_category.map((row, i) => `
-              <div class="bar-row">
-                <div class="bar-name" title="${esc(row.category)}">${esc(row.category)}</div>
+              <div class="bar-row" onclick="drillCategory('${esc(row.category)}')" title="Filter to ${esc(row.category)}">
+                <div class="bar-name">${esc(row.category)}</div>
                 <div class="bar-track"><div class="bar-fill ${COLORS[i % COLORS.length]}" style="width:${pct(row.total, maxCat)}%"></div></div>
                 <div class="bar-meta">${row.count} items &nbsp; R ${fmt(row.total)}</div>
               </div>`).join('')}
@@ -482,12 +549,12 @@ function renderSummary(d) {
         </div>
 
         <div class="section">
-          <div class="section-head">Spend by Store</div>
+          <div class="section-head">Spend by Store <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click to filter ↓</span></div>
           ${d.by_store.length === 0 ? '<div class="empty" style="padding:24px">No data yet</div>' : `
           <div class="bar-list">
             ${d.by_store.map((row, i) => `
-              <div class="bar-row">
-                <div class="bar-name" title="${esc(row.store)}">${esc(row.store)}</div>
+              <div class="bar-row" onclick="drillStore('${esc(row.store)}')" title="Filter to ${esc(row.store)}">
+                <div class="bar-name">${esc(row.store)}</div>
                 <div class="bar-track"><div class="bar-fill ${COLORS[(i+2) % COLORS.length]}" style="width:${pct(row.total, maxStore)}%"></div></div>
                 <div class="bar-meta">${row.receipt_count} receipts &nbsp; R ${fmt(row.total)}</div>
               </div>`).join('')}
@@ -496,7 +563,7 @@ function renderSummary(d) {
       </div>
 
       <div class="section">
-        <div class="section-head">Most Purchased Items</div>
+        <div class="section-head">Most Purchased Items <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click to search ↓</span></div>
         ${d.top_items.length === 0 ? '<div class="empty" style="padding:24px">No data yet — scan some receipts first.</div>' : `
         <div class="surface-box">
           <table class="data-table">
@@ -504,9 +571,9 @@ function renderSummary(d) {
               <th>Item</th><th>Times bought</th><th>Avg Price</th><th>Total Spend</th>
             </tr></thead>
             <tbody>${d.top_items.map(item => `
-              <tr>
+              <tr style="cursor:pointer;" onclick="drillItem('${esc(item.name)}')" title="Search for ${esc(item.name)}">
                 <td>
-                  ${esc(item.name)}
+                  <span onmouseenter="this.style.color='var(--accent)'" onmouseleave="this.style.color=''">${esc(item.name)}</span>
                   <div style="margin-top:4px">
                     <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden">
                       <div style="height:100%;width:${pct(item.count, maxItem)}%;background:var(--accent);border-radius:2px"></div>
