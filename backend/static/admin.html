@@ -213,6 +213,7 @@
     <button class="tab-btn active" onclick="switchTab('users')">Users</button>
     <button class="tab-btn" id="reg-tab-btn" onclick="switchTab('registrations')">Registrations <span id="pending-badge" style="display:none;background:rgba(249,115,22,.15);color:var(--accent);font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px;"></span></button>
     <button class="tab-btn" onclick="switchTab('receipts')">Assign Receipts</button>
+    <button class="tab-btn" onclick="switchTab('tools')">Tools</button>
   </div>
 
   <div class="tab-pane active" id="tab-users">
@@ -350,6 +351,23 @@
       </tbody>
     </table>
   </div><!-- /tab-receipts -->
+
+  <div class="tab-pane" id="tab-tools">
+    <div style="max-width:560px;padding:20px 0;">
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:16px;">
+        <div style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">Ingredient Normalization</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
+          Backfill <code style="background:var(--surface2);padding:1px 5px;border-radius:2px;font-size:12px;">canonical_name</code> for all existing receipt items that haven't been normalized yet.
+          Uses Claude Haiku to map brand names to generic ingredients (e.g. "Clover Full Cream Milk 2L" → "Milk").
+          New receipts are normalized automatically — this only processes historical items.
+        </p>
+        <button class="btn-primary" id="normalize-btn" onclick="runNormalize()">Run Backfill</button>
+        <span id="normalize-msg" style="display:none;margin-left:12px;font-family:var(--mono);font-size:11px;"></span>
+      </div>
+
+    </div>
+  </div><!-- /tab-tools -->
 
 <!-- Deny reason modal -->
 <div class="modal-overlay" id="deny-modal">
@@ -612,6 +630,33 @@
     document.getElementById('tab-' + tab).classList.add('active');
     event.currentTarget.classList.add('active');
     if (tab === 'receipts') { populateUserSelects(); loadAdminReceipts(); }
+  }
+
+  // ── Tools ─────────────────────────────────────────────────────────────────
+  async function runNormalize() {
+    const btn = document.getElementById('normalize-btn');
+    const msg = document.getElementById('normalize-msg');
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+    msg.style.display = 'none';
+    try {
+      const res  = await fetch('/admin/normalize-items', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        msg.style.color = 'var(--green)';
+        msg.textContent = `✓ Normalized ${data.normalized} items (${data.unique_names} unique names)`;
+      } else {
+        msg.style.color = 'var(--red)';
+        msg.textContent = data.detail || 'Error';
+      }
+    } catch(e) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Network error';
+    } finally {
+      msg.style.display = '';
+      btn.disabled = false;
+      btn.textContent = 'Run Backfill';
+    }
   }
 
   // ── Registrations ─────────────────────────────────────────────────────────
