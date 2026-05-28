@@ -1,0 +1,63 @@
+{
+  "name": "Uitkyk",
+  "aliases": ["uitkyk", "uitkyk vleismark"],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "butchery",
+  "vat_indicator": {
+    "type": "price_suffix",
+    "standard_rated_marker": "#1",
+    "zero_rated_marker": "#2",
+    "description": "Every item line ends with #1 (15% VAT, vat_applicable=true) or #2 (0% VAT, vat_applicable=false). Read the suffix for EACH item individually. DO NOT assume all items share the same VAT status. #1 and #2 are both common on the same receipt."
+  },
+  "quantity_rules": {
+    "description": "CRITICAL — EACH ITEM SPANS TWO LINES ON THE RECEIPT. Line 1 is the quantity/weight line: '[qty] @ [unit_price]'. Line 2 is the product line: '[PRODUCT NAME]  [total_price]#N'. The number printed after '@' on Line 1 is the unit_price. The number printed before '#' on Line 2 is the total_price. NEVER use the total_price as the unit_price. Verify: unit_price × quantity = total_price.",
+    "multi_unit_pattern": "Line 1: '[qty] @ [unit_price]' — the value after '@' is ALWAYS the unit_price, NOT the total",
+    "examples": [
+      "Line 1: '2 @ 35.99' | Line 2: 'CLOVER MILK FRSH FULL CREAM 2LT  71.98#2' → quantity=2, unit_price=35.99, total_price=71.98, vat_applicable=false. WRONG: unit_price=71.98",
+      "Line 1: '3 @ 1.69'  | Line 2: 'UITKYK 24L PLASTIC BAG  5.07#1'           → quantity=3, unit_price=1.69,  total_price=5.07,  vat_applicable=true.  WRONG: unit_price=5.07",
+      "Line 1: '2 @ 14.99' | Line 2: 'TOMATO SPANISH SANTE 200G  29.98#2'       → quantity=2, unit_price=14.99, total_price=29.98, vat_applicable=false. WRONG: unit_price=29.98",
+      "Line 1: '2 @ 29.99' | Line 2: 'OK PEANUT BUTTER SMOOTH 400G  59.98#1'   → quantity=2, unit_price=29.99, total_price=59.98, vat_applicable=true.  WRONG: unit_price=59.98",
+      "No '@ ' line: 'MILK TART EACH  34.99#1' → quantity=1, unit_price=34.99, total_price=34.99, vat_applicable=true",
+      "No '@ ' line: 'APPLE CRIPPS 1 X EACH  24.99#2' → quantity=1, unit_price=24.99, total_price=24.99, vat_applicable=false"
+    ]
+  },
+  "weight_rules": {
+    "description": "When the quantity on Line 1 is a DECIMAL NUMBER (e.g. 0.332, 0.964, 1.32) AND the product name contains 'P/Kg' or 'P/kg': this is a weight sale. Set unit_type=weight_kg, weight_kg=the decimal, per_kg_price=the value after '@', total_price=the value before '#N'. Do NOT treat the decimal as a unit count.",
+    "examples": [
+      "Line 1: '0.332 @ 105.00' | Line 2: 'PORKALICIOUS MAGIC RASHERS P/KG  34.86#1' → weight_kg=0.332, per_kg_price=105.00, total_price=34.86, unit_type=weight_kg, vat_applicable=true",
+      "Line 1: '0.356 @ 105.00' | Line 2: 'PORK RASHERS BBQ P/KG  37.38#1'           → weight_kg=0.356, per_kg_price=105.00, total_price=37.38, unit_type=weight_kg, vat_applicable=true",
+      "Line 1: '1.004 @ 72.99'  | Line 2: 'CHICKEN FILLETS PP P/KG  73.28#1'         → weight_kg=1.004, per_kg_price=72.99,  total_price=73.28, unit_type=weight_kg, vat_applicable=true",
+      "Line 1: '0.964 @ 72.99'  | Line 2: 'CHICKEN FILLETS PP P/KG  70.36#1'         → weight_kg=0.964, per_kg_price=72.99,  total_price=70.36, unit_type=weight_kg, vat_applicable=true",
+      "Line 1: '1.32 @ 49.99'   | Line 2: 'VEG CUT COUNTRY MIX P/KG  65.99#2'       → weight_kg=1.32,  per_kg_price=49.99,  total_price=65.99, unit_type=weight_kg, vat_applicable=false",
+      "Line 1: '0.64 @ 84.99'   | Line 2: '***UITKYK BEEF CHEESE GRILLER P/KG  54.38#1' → weight_kg=0.64, per_kg_price=84.99, total_price=54.38, unit_type=weight_kg, vat_applicable=true",
+      "Line 1: '0.702 @ 119.99' | Line 2: 'UITKYK BEEF CHUTNEY WORS P/KG  84.23#1'  → weight_kg=0.702, per_kg_price=119.99, total_price=84.23, unit_type=weight_kg, vat_applicable=true"
+    ]
+  },
+  "product_name_rules": {
+    "description": "Product names are uppercase on the receipt. Strip leading '***' for display_name and convert to title case. 'P/Kg' indicates a weight item. 'PP' means per-portion (unit-sold). 'Each' means a single unit. The same product (e.g. CHICKEN FILLETS PP P/KG) can appear twice as two SEPARATE purchases at different weights — output both as distinct items.",
+    "patterns": [
+      "***UITKYK prefix = Uitkyk own-brand product — strip asterisks for display_name",
+      "P/Kg = priced by weight — set unit_type=weight_kg",
+      "PP = per portion, unit-sold",
+      "Each = individual unit, quantity=1"
+    ]
+  },
+  "discount_rules": {
+    "description": "No per-item discount lines. An aggregate 'You Saved: R[amount]' appears in the footer — do not include it as a line item."
+  },
+  "store_name_rules": {
+    "description": "Always output 'Uitkyk' as the store name.",
+    "always_output": "Uitkyk"
+  },
+  "item_count_rules": {
+    "description": "Extract EVERY line that ends with #1 or #2. Do not skip any. The receipt may have 13-15 product lines — scan the full receipt image from top to bottom and include all of them."
+  },
+  "prompt_notes": [
+    "The tax summary near the bottom reads '[VAT-excl base] @ [rate]% Tax(#N): [VAT amount]'. Extract both rows into tax_groups: rate 0% row → gross=base, tax=0, net=base; rate 15% row → net=base, tax=tax_amount, gross=base+tax_amount. Set vat_total to the 15% row's tax value.",
+    "Prices printed on #1 item lines are VAT-inclusive. The tax summary's base for #1 is the VAT-exclusive total — do not double-count.",
+    "Two lines showing the same product name (e.g. CHICKEN FILLETS PP P/KG) are two separate purchases at different weights. Output both as separate items.",
+    "Whole-number quantities (1, 2, 3) = unit counts. Decimal quantities (0.332, 0.964, 1.32, etc.) = weights in kg — always paired with P/Kg in the product name."
+  ]
+}

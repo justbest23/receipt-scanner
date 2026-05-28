@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basket · History</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #363a40;
+      --text:       #e2e4e7;
+      --text-dim:   #6b7280;
+      --text-muted: #3f444c;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --teal:       #2dd4bf;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+      height: 52px; flex-shrink: 0; padding: 0 24px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; margin-right: 28px; text-decoration: none; color: var(--text); }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    nav { display: flex; gap: 2px; }
+    .nav-link { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; transition: color .15s, background .15s; }
+    .nav-link:hover { color: var(--text); }
+    .nav-link.active { color: var(--accent); background: rgba(249,115,22,.08); }
+
+    /* ── Workspace ── */
+    .workspace { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 52px); overflow: hidden; }
+
+    /* ── List panel ── */
+    .list-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .list-head { padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    .list-search {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--sans); font-size: 13px; padding: 7px 10px; border-radius: 2px;
+    }
+    .list-search:focus { outline: none; border-color: var(--accent); }
+    .list-meta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 7px; }
+    .list-body { flex: 1; overflow-y: auto; }
+    .list-body::-webkit-scrollbar { width: 3px; }
+    .list-body::-webkit-scrollbar-thumb { background: var(--border2); }
+    .list-footer { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .btn-load-more {
+      width: 100%; padding: 8px; background: transparent; color: var(--text-dim);
+      font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
+      border: 1px solid var(--border); cursor: pointer; border-radius: 2px;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-load-more:hover { border-color: var(--border2); color: var(--text); }
+    .btn-load-more:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Receipt cards ── */
+    .receipt-card {
+      padding: 11px 14px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .12s;
+    }
+    .receipt-card:hover { background: var(--surface2); }
+    .receipt-card.active { background: rgba(249,115,22,.07); border-left: 2px solid var(--accent); }
+    .rc-store { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+    .rc-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); display: flex; gap: 10px; }
+    .rc-total { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 3px; }
+    .rc-empty { padding: 32px 14px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 2; }
+
+    /* ── Detail panel ── */
+    .detail-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* toolbar */
+    .detail-toolbar {
+      padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--surface);
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .detail-title { font-family: var(--mono); font-size: 12px; color: var(--text-dim); flex: 1; }
+    .detail-title strong { color: var(--text); }
+    .btn-save {
+      padding: 7px 20px; background: var(--accent); color: #000;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+      border: none; cursor: pointer; border-radius: 2px; transition: opacity .15s;
+    }
+    .btn-save:hover { opacity: .85; }
+    .btn-save:disabled { opacity: .35; cursor: not-allowed; }
+    .btn-delete {
+      padding: 7px 14px; background: transparent; color: var(--text-dim);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+      border: 1px solid var(--border); cursor: pointer; border-radius: 2px; transition: border-color .15s, color .15s;
+    }
+    .btn-delete:hover { border-color: var(--red); color: var(--red); }
+    .save-status { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+    .save-status.ok  { color: var(--green); }
+    .save-status.err { color: var(--red); }
+
+    /* detail body */
+    .detail-body { flex: 1; overflow-y: auto; }
+    .detail-body::-webkit-scrollbar { width: 3px; }
+    .detail-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    /* image section */
+    .image-section { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+    .image-section-head {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .07em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .image-toggle { cursor: pointer; color: var(--accent); font-size: 10px; margin-left: auto; }
+    .image-toggle:hover { text-decoration: underline; }
+    .image-box { position: relative; }
+    .receipt-img {
+      width: 100%; max-height: 320px; object-fit: contain; object-position: top;
+      border: 1px solid var(--border); border-radius: 2px; display: block; cursor: zoom-in;
+      background: var(--surface2);
+    }
+    .receipt-img.expanded { max-height: none; cursor: zoom-out; }
+    .no-image { padding: 24px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 2px; }
+
+    /* meta section */
+    .meta-section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .meta-grid.wide { grid-template-columns: 2fr 1fr 1fr 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+    .field input, .field select {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--sans); font-size: 13px; padding: 6px 8px; border-radius: 2px;
+      transition: border-color .15s; width: 100%;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+
+    /* items section */
+    .items-section { padding: 14px 18px 24px; }
+    .items-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .items-title { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+    .btn-add-item {
+      font-family: var(--mono); font-size: 10px; padding: 4px 10px;
+      background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+      cursor: pointer; border-radius: 2px;
+    }
+    .btn-add-item:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* item rows */
+    .item-row { border: 1px solid var(--border); border-radius: 3px; margin-bottom: 8px; background: var(--surface2); overflow: hidden; }
+    .item-row.flagged { border-color: rgba(234,179,8,.4); }
+    .item-row-header {
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+    }
+    .item-row-header:hover { background: var(--surface3); }
+    .chevron { color: var(--text-muted); font-size: 10px; transition: transform .18s; flex-shrink: 0; }
+    .chevron.open { transform: rotate(90deg); }
+    .item-name-disp { flex: 1; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item-price-disp { font-family: var(--mono); font-size: 12px; color: var(--text-dim); flex-shrink: 0; }
+    .vat-badge { font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 2px; flex-shrink: 0; }
+    .vat-y { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.25); }
+    .vat-n { background: rgba(34,197,94,.1);  color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+    .flag-icon { font-size: 10px; color: var(--yellow); }
+    .btn-del-item { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
+    .btn-del-item:hover { color: var(--red); }
+
+    .item-fields { display: none; }
+    .item-fields.open { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; }
+    .item-fields .field.full { grid-column: 1 / -1; }
+    .field .receipt-ref { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .per-kg-row {
+      grid-column: 1 / -1; padding: 5px 8px; background: rgba(249,115,22,.06);
+      border: 1px solid rgba(249,115,22,.2); border-radius: 2px;
+      font-family: var(--mono); font-size: 11px; color: var(--accent);
+    }
+
+    select option { background: var(--surface2); }
+
+    /* spend group tag chips */
+    .tag-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .tag-chip {
+      padding: 3px 9px; border-radius: 12px; font-family: var(--mono); font-size: 10px;
+      cursor: pointer; border: 1px solid var(--border2); background: transparent;
+      color: var(--text-dim); transition: all .15s;
+    }
+    .tag-chip:hover { border-color: var(--chip-color, var(--accent)); color: var(--chip-color, var(--accent)); }
+    .tag-chip.active { background: color-mix(in srgb, var(--chip-color, var(--accent)) 18%, transparent); border-color: var(--chip-color, var(--accent)); color: var(--chip-color, var(--accent)); }
+    .quick-tag-bar { display: flex; align-items: center; gap: 8px; padding: 6px 18px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    .quick-tag-label { font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .quick-tag-select {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--mono); font-size: 10px; padding: 4px 8px; border-radius: 2px;
+    }
+    .btn-quick-tag {
+      padding: 4px 12px; font-family: var(--mono); font-size: 10px;
+      background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+      cursor: pointer; border-radius: 2px;
+    }
+    .btn-quick-tag:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-clear-tags {
+      padding: 4px 10px; font-family: var(--mono); font-size: 10px;
+      background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+      cursor: pointer; border-radius: 2px; margin-left: auto;
+    }
+    .btn-clear-tags:hover { border-color: var(--red); color: var(--red); }
+    .no-groups-note { font-family: var(--mono); font-size: 10px; color: var(--text-muted); padding: 6px 18px; border-bottom: 1px solid var(--border); }
+
+    /* empty / placeholder */
+    .empty-state { height: 100%; display: flex; align-items: center; justify-content: center; }
+    .empty-inner { text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 2.2; }
+
+    /* delete confirm overlay */
+    .confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .confirm-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      padding: 28px 32px; max-width: 360px; width: 90%; text-align: center;
+    }
+    .confirm-box h3 { font-family: var(--mono); font-size: 13px; margin-bottom: 10px; }
+    .confirm-box p  { font-size: 13px; color: var(--text-dim); margin-bottom: 22px; line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .btn-confirm-del {
+      padding: 8px 22px; background: var(--red); color: #fff;
+      font-family: var(--mono); font-size: 11px; border: none; cursor: pointer; border-radius: 2px;
+    }
+    .btn-cancel {
+      padding: 8px 18px; background: transparent; color: var(--text-dim);
+      font-family: var(--mono); font-size: 11px; border: 1px solid var(--border);
+      cursor: pointer; border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2zm6 0h6v6h-2V5.414l-5.293 5.293-1.414-1.414L12.586 4H8V2z"/></svg></div>
+    <span>BASKET</span>
+  </a>
+  <nav>
+    <a class="nav-link" href="/">Receipts</a>
+    <a class="nav-link active" href="/history">History</a>
+    <a class="nav-link" href="/prices">Prices</a>
+    <a class="nav-link" href="/meals">Meal Plan</a>
+    <a class="nav-link" href="/analytics">Insights</a>
+    <a class="nav-link" href="/household">Household</a>
+    <a class="nav-link" href="/spend-groups">Spend</a>
+  </nav>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── List panel ── -->
+  <div class="list-panel">
+    <div class="list-head">
+      <input class="list-search" type="text" id="search-box" placeholder="Filter by store or date…" autocomplete="off">
+      <div class="list-meta" id="list-meta">Loading…</div>
+    </div>
+    <div class="list-body" id="receipt-list"></div>
+    <div class="list-footer">
+      <button class="btn-load-more" id="load-more-btn" onclick="loadMore()">Load more</button>
+    </div>
+  </div>
+
+  <!-- ── Detail panel ── -->
+  <div class="detail-panel" id="detail-panel">
+    <div class="empty-state">
+      <div class="empty-inner">
+        ← Select a receipt<br>to view and edit it
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const LIMIT = 40;
+let allReceipts  = [];   // full list in memory (filtered view)
+let displayedIds = new Set();
+let skip         = 0;
+let hasMore      = true;
+let currentId    = null;
+let filterQ      = '';
+let myGroups     = [];   // user's spend groups
+let itemTags     = {};   // {item_id: [group_id, ...]} for the open receipt
+
+const CATEGORIES = ['fruit','vegetable','dairy','meat','seafood','bakery','pantry','frozen',
+  'beverages','snacks','alcohol','household','toiletries','clothing','footwear',
+  'accessories','beauty','homeware','sport','discount','other'];
+const UNIT_TYPES = ['unit','weight_kg','weight_g'];
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([fetchMore(), loadGroups()]);
+  const hash = parseInt(location.hash.slice(1));
+  if (hash) openReceipt(hash);
+});
+
+async function loadGroups() {
+  try {
+    myGroups = await fetch('/api/spend-groups').then(r => r.json());
+  } catch(e) { myGroups = []; }
+}
+
+// ── Fetch list ────────────────────────────────────────────────────────────────
+async function fetchMore() {
+  const btn = ge('load-more-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  try {
+    const rows = await fetch(`/receipts?skip=${skip}&limit=${LIMIT}`).then(r => r.json());
+    rows.forEach(r => { if (!displayedIds.has(r.id)) { allReceipts.push(r); displayedIds.add(r.id); } });
+    skip    += rows.length;
+    hasMore  = rows.length === LIMIT;
+    renderList();
+  } catch(e) {
+    ge('list-meta').textContent = 'Error loading receipts';
+  } finally {
+    btn.disabled    = !hasMore;
+    btn.textContent = hasMore ? 'Load more' : 'All loaded';
+  }
+}
+
+async function loadMore() { await fetchMore(); }
+
+// ── Filter + render list ──────────────────────────────────────────────────────
+ge('search-box').addEventListener('input', () => {
+  filterQ = ge('search-box').value.toLowerCase().trim();
+  renderList();
+});
+
+function filtered() {
+  if (!filterQ) return allReceipts;
+  return allReceipts.filter(r =>
+    (r.store  || '').toLowerCase().includes(filterQ) ||
+    (r.date   || '').includes(filterQ) ||
+    (r.vendor || '').toLowerCase().includes(filterQ)
+  );
+}
+
+function renderList() {
+  const rows = filtered();
+  ge('list-meta').textContent = `${rows.length} receipt${rows.length !== 1 ? 's' : ''}`;
+  const list = ge('receipt-list');
+  if (!rows.length) {
+    list.innerHTML = `<div class="rc-empty">No receipts found${filterQ ? ` for "${filterQ}"` : ''}.<br>Scan a receipt to get started.</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(r => `
+    <div class="receipt-card ${r.id === currentId ? 'active' : ''}" id="card-${r.id}" onclick="openReceipt(${r.id})">
+      <div class="rc-store">${esc(r.store || 'Unknown store')}</div>
+      <div class="rc-meta">
+        <span>#${r.id}</span>
+        <span>${r.date || '—'}</span>
+        <span>${r.item_count} item${r.item_count !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="rc-total">${r.total != null ? 'R ' + fmt(r.total) : '—'}</div>
+    </div>`).join('');
+}
+
+// ── Open receipt detail ───────────────────────────────────────────────────────
+async function openReceipt(id) {
+  currentId = id;
+  location.hash = id;
+  renderList();
+
+  const panel = ge('detail-panel');
+  panel.innerHTML = `<div class="empty-state"><div class="empty-inner">Loading…</div></div>`;
+
+  try {
+    const data = await fetch(`/receipts/${id}`).then(r => r.json());
+    // Build itemTags from data (tags already included per item via _detail())
+    itemTags = {};
+    for (const item of (data.items || [])) {
+      if (item.id) itemTags[item.id] = item.spend_group_ids || [];
+    }
+    renderDetail(data);
+  } catch(e) {
+    panel.innerHTML = `<div class="empty-state"><div class="empty-inner" style="color:var(--red)">Failed to load receipt</div></div>`;
+  }
+}
+
+// ── Render detail ─────────────────────────────────────────────────────────────
+function renderDetail(data) {
+  const panel = ge('detail-panel');
+
+  panel.innerHTML = `
+    <!-- toolbar -->
+    <div class="detail-toolbar">
+      <div class="detail-title">
+        <strong>Receipt #${data.id}</strong>
+        &nbsp;·&nbsp; ${esc(data.store || 'Unknown')}
+        ${data.date ? `&nbsp;·&nbsp; ${data.date}` : ''}
+      </div>
+      <span class="save-status" id="save-status"></span>
+      <button class="btn-save" id="save-btn" onclick="saveReceipt(${data.id})">Save changes</button>
+      <button class="btn-delete" onclick="confirmDelete(${data.id})">Delete</button>
+    </div>
+
+    ${myGroups.length > 0 ? `
+    <div class="quick-tag-bar">
+      <span class="quick-tag-label">TAG ALL ITEMS →</span>
+      <select class="quick-tag-select" id="quick-tag-sel">
+        <option value="">choose group…</option>
+        ${myGroups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}
+      </select>
+      <button class="btn-quick-tag" onclick="quickTagAll()">Apply</button>
+      <button class="btn-clear-tags" onclick="clearAllTags()">Clear all tags</button>
+    </div>` : `<div class="no-groups-note">Create a Spend Group to start tagging receipts → <a href="/spend-groups" style="color:var(--accent)">Spend Groups</a></div>`}
+
+    <div class="detail-body" id="detail-body">
+
+      <!-- image -->
+      <div class="image-section">
+        <div class="image-section-head">
+          Original Receipt
+          <span class="image-toggle" onclick="toggleImage()">collapse</span>
+        </div>
+        <div class="image-box" id="image-box">
+          <img class="receipt-img" id="receipt-img"
+            src="/receipts/${data.id}/image"
+            alt="Receipt image"
+            onclick="toggleExpand(this)"
+            onerror="this.closest('.image-box').innerHTML='<div class=\\'no-image\\'>No image saved for this receipt</div>'">
+        </div>
+      </div>
+
+      <!-- meta -->
+      <div class="meta-section">
+        <div class="meta-grid wide">
+          <div class="field">
+            <label>Store</label>
+            <input type="text" id="r-store" value="${esc(data.store || '')}">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="r-date" value="${data.date || ''}">
+          </div>
+          <div class="field">
+            <label>Total (R)</label>
+            <input type="number" step="0.01" id="r-total" value="${data.total ?? ''}">
+          </div>
+          <div class="field">
+            <label>VAT (R)</label>
+            <input type="number" step="0.01" id="r-vat" value="${data.vat_total ?? ''}">
+          </div>
+        </div>
+      </div>
+
+      <!-- items -->
+      <div class="items-section">
+        <div class="items-head">
+          <span class="items-title">Line Items (<span id="item-count">${data.items.length}</span>)</span>
+          <button class="btn-add-item" onclick="addItem()">+ Add item</button>
+        </div>
+        <div id="items-list">
+          ${data.items.map((item, idx) => itemRowHtml(item, idx)).join('')}
+        </div>
+      </div>
+
+    </div>`;
+
+  // wire up expand/collapse for existing item rows
+  wireItemRows();
+}
+
+// ── Item row HTML ─────────────────────────────────────────────────────────────
+function itemRowHtml(item, idx) {
+  const name    = item.name || item.receipt_name || 'Unknown';
+  const total   = item.total_price;
+  const vatCls  = item.vat_applicable ? 'vat-y' : 'vat-n';
+  const vatLbl  = item.vat_applicable ? '15%' : 'EXEMPT';
+  const hasPkg  = item.per_kg_price != null || (item.weight_kg && item.total_price);
+  let   pkgHtml = '';
+  if (hasPkg) {
+    const pkgPrice = item.per_kg_price ?? (item.weight_kg ? (item.total_price / item.weight_kg).toFixed(2) : null);
+    if (pkgPrice) pkgHtml = `<div class="per-kg-row">R ${Number(pkgPrice).toFixed(2)} / kg</div>`;
+  }
+
+  const catOpts  = CATEGORIES.map(c => `<option value="${c}"${c===item.category?' selected':''}>${c}</option>`).join('');
+  const unitOpts = UNIT_TYPES.map(u => `<option value="${u}"${u===item.unit_type?' selected':''}>${u}</option>`).join('');
+
+  const activeTags = (item.id && itemTags[item.id]) ? itemTags[item.id] : [];
+  const tagChipsHtml = myGroups.length && item.id ? `
+    <div class="field full">
+      <label>Spending Groups</label>
+      <div class="tag-chips" id="chips-${item.id}">
+        ${myGroups.map(g => `
+          <button class="tag-chip${activeTags.includes(g.id)?' active':''}"
+            style="--chip-color:${g.color}"
+            data-group="${g.id}" data-item="${item.id}"
+            onclick="toggleTag(event,${item.id},${g.id})">${esc(g.name)}</button>
+        `).join('')}
+      </div>
+    </div>` : '';
+
+  return `
+    <div class="item-row${item.flag?' flagged':''}" data-idx="${idx}" data-item-id="${item.id||''}" data-receipt-name="${esc(item.receipt_name||'')}">
+      <div class="item-row-header">
+        <span class="chevron">▶</span>
+        <span class="item-name-disp">${esc(name)}</span>
+        <span class="item-price-disp">${total != null ? 'R '+fmt(total) : '—'}</span>
+        <span class="vat-badge ${vatCls}">${vatLbl}</span>
+        ${item.flag ? `<span class="flag-icon" title="${esc(item.flag)}">⚠</span>` : ''}
+        <button class="btn-del-item" onclick="deleteItem(event,${idx})">×</button>
+      </div>
+      <div class="item-fields">
+        <div class="field full">
+          <label>Name</label>
+          <input type="text" data-field="name" value="${esc(name)}">
+          ${item.receipt_name ? `<span class="receipt-ref">Original: ${esc(item.receipt_name)}</span>` : ''}
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select data-field="category">${catOpts}</select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" step="0.001" data-field="quantity" value="${item.quantity ?? 1}">
+        </div>
+        <div class="field">
+          <label>Unit Type</label>
+          <select data-field="unit_type">${unitOpts}</select>
+        </div>
+        <div class="field">
+          <label>Weight (kg)</label>
+          <input type="number" step="0.001" data-field="weight_kg" value="${item.weight_kg ?? ''}">
+        </div>
+        <div class="field">
+          <label>Unit Price (R)</label>
+          <input type="number" step="0.01" data-field="unit_price" value="${item.unit_price ?? ''}">
+        </div>
+        <div class="field">
+          <label>Total Price (R)</label>
+          <input type="number" step="0.01" data-field="total_price" value="${item.total_price ?? ''}">
+        </div>
+        <div class="field">
+          <label>VAT</label>
+          <select data-field="vat_applicable">
+            <option value="true"${item.vat_applicable?' selected':''}>15% VAT</option>
+            <option value="false"${!item.vat_applicable?' selected':''}>Exempt</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Flag / Note</label>
+          <input type="text" data-field="flag" value="${esc(item.flag||'')}">
+        </div>
+        ${pkgHtml}
+        ${tagChipsHtml}
+      </div>
+    </div>`;
+}
+
+function wireItemRows() {
+  document.querySelectorAll('#items-list .item-row-header').forEach(hdr => {
+    hdr.addEventListener('click', function(e) {
+      if (e.target.classList.contains('btn-del-item')) return;
+      const fields = this.closest('.item-row').querySelector('.item-fields');
+      const chev   = this.querySelector('.chevron');
+      fields.classList.toggle('open');
+      chev.classList.toggle('open');
+    });
+  });
+}
+
+// ── Add / delete items ────────────────────────────────────────────────────────
+function addItem() {
+  const list = ge('items-list');
+  const idx  = list.querySelectorAll('.item-row').length;
+  const div  = document.createElement('div');
+  div.innerHTML = itemRowHtml({
+    name:'New Item', category:'other', quantity:1, unit_type:'unit',
+    vat_applicable:true, receipt_name:null, flag:null,
+  }, idx);
+  const row = div.firstElementChild;
+  list.appendChild(row);
+  row.querySelector('.item-fields').classList.add('open');
+  row.querySelector('.chevron').classList.add('open');
+  row.querySelector('.item-row-header').addEventListener('click', function(e) {
+    if (e.target.classList.contains('btn-del-item')) return;
+    const fields = row.querySelector('.item-fields');
+    const chev   = row.querySelector('.chevron');
+    fields.classList.toggle('open');
+    chev.classList.toggle('open');
+  });
+  ge('item-count').textContent = list.querySelectorAll('.item-row').length;
+}
+
+function deleteItem(e, idx) {
+  e.stopPropagation();
+  const row = document.querySelector(`#items-list .item-row[data-idx="${idx}"]`);
+  if (row) row.remove();
+  ge('item-count').textContent = ge('items-list').querySelectorAll('.item-row').length;
+}
+
+// ── Image expand ──────────────────────────────────────────────────────────────
+function toggleExpand(img) {
+  img.classList.toggle('expanded');
+}
+function toggleImage() {
+  const box    = ge('image-box');
+  const toggle = document.querySelector('.image-toggle');
+  const hidden = box.style.display === 'none';
+  box.style.display    = hidden ? '' : 'none';
+  toggle.textContent   = hidden ? 'collapse' : 'expand';
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+async function saveReceipt(id) {
+  const btn    = ge('save-btn');
+  const status = ge('save-status');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  status.textContent = '';
+  status.className = 'save-status';
+
+  const items = [];
+  ge('items-list').querySelectorAll('.item-row').forEach(row => {
+    const get = f => { const el = row.querySelector(`[data-field="${f}"]`); return el ? el.value : null; };
+    const tp  = parseFloat(get('total_price'));
+    const wkg = parseFloat(get('weight_kg'));
+    items.push({
+      receipt_name:   row.dataset.receiptName || null,
+      name:           get('name'),
+      category:       get('category'),
+      quantity:       parseFloat(get('quantity')) || 1,
+      unit_type:      get('unit_type'),
+      weight_kg:      isNaN(wkg) ? null : wkg || null,
+      unit_price:     parseFloat(get('unit_price')) || null,
+      total_price:    isNaN(tp)  ? null : tp  || null,
+      vat_applicable: get('vat_applicable') === 'true',
+      flag:           get('flag') || null,
+    });
+  });
+
+  const payload = {
+    store_name:   ge('r-store').value || null,
+    receipt_date: ge('r-date').value  || null,
+    total:        parseFloat(ge('r-total').value) || null,
+    vat_total:    parseFloat(ge('r-vat').value)   || null,
+    items,
+  };
+
+  try {
+    const r = await fetch(`/receipts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+
+    // update card in list
+    const card = ge(`card-${id}`);
+    if (card) {
+      card.querySelector('.rc-store').textContent = d.store || 'Unknown store';
+      const meta = card.querySelector('.rc-meta');
+      meta.innerHTML = `<span>#${d.id}</span><span>${d.date||'—'}</span><span>${d.item_count} item${d.item_count!==1?'s':''}</span>`;
+      card.querySelector('.rc-total').textContent = d.total != null ? 'R ' + fmt(d.total) : '—';
+    }
+    // update in allReceipts
+    const idx = allReceipts.findIndex(x => x.id === id);
+    if (idx >= 0) allReceipts[idx] = { id: d.id, store: d.store, date: d.date, total: d.total, item_count: d.item_count };
+
+    // refresh detail title
+    const title = document.querySelector('.detail-title');
+    if (title) title.innerHTML = `<strong>Receipt #${d.id}</strong> &nbsp;·&nbsp; ${esc(d.store||'Unknown')} ${d.date?`&nbsp;·&nbsp; ${d.date}`:''}`;
+
+    status.textContent = '✓ Saved';
+    status.className   = 'save-status ok';
+  } catch(e) {
+    status.textContent = '✗ ' + e.message;
+    status.className   = 'save-status err';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Save changes';
+    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function confirmDelete(id) {
+  const store = (allReceipts.find(r => r.id === id) || {}).store || `#${id}`;
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-overlay';
+  overlay.innerHTML = `
+    <div class="confirm-box">
+      <h3>Delete receipt?</h3>
+      <p>This will permanently delete <strong>${esc(store)}</strong> and all its line items. This cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-del" onclick="doDelete(${id})">Delete</button>
+        <button class="btn-cancel" onclick="this.closest('.confirm-overlay').remove()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function doDelete(id) {
+  document.querySelector('.confirm-overlay')?.remove();
+  try {
+    const r = await fetch(`/receipts/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+
+    // remove from local state
+    allReceipts  = allReceipts.filter(x => x.id !== id);
+    displayedIds.delete(id);
+    skip = Math.max(0, skip - 1);
+
+    // clear detail
+    currentId = null;
+    location.hash = '';
+    ge('detail-panel').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-inner">Receipt deleted.<br>Select another to continue.</div>
+      </div>`;
+
+    renderList();
+  } catch(e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// ── Tag management ────────────────────────────────────────────────────────────
+async function toggleTag(e, itemId, groupId) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const wasActive = btn.classList.contains('active');
+
+  if (!itemTags[itemId]) itemTags[itemId] = [];
+  if (wasActive) {
+    itemTags[itemId] = itemTags[itemId].filter(id => id !== groupId);
+  } else {
+    itemTags[itemId] = [...itemTags[itemId], groupId];
+  }
+  btn.classList.toggle('active', !wasActive);
+
+  try {
+    const r = await fetch(`/receipts/${currentId}/items/${itemId}/tags`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({group_ids: itemTags[itemId]}),
+    });
+    if (!r.ok) throw new Error('save failed');
+  } catch {
+    // revert on error
+    if (wasActive) {
+      itemTags[itemId] = [...itemTags[itemId], groupId];
+    } else {
+      itemTags[itemId] = itemTags[itemId].filter(id => id !== groupId);
+    }
+    btn.classList.toggle('active', wasActive);
+  }
+}
+
+async function quickTagAll() {
+  const sel = ge('quick-tag-sel');
+  const groupId = parseInt(sel?.value);
+  if (!groupId || !currentId) return;
+
+  const rows = ge('items-list')?.querySelectorAll('.item-row[data-item-id]') || [];
+  const promises = [];
+  rows.forEach(row => {
+    const itemId = parseInt(row.dataset.itemId);
+    if (!itemId) return;
+    if (!itemTags[itemId]) itemTags[itemId] = [];
+    if (!itemTags[itemId].includes(groupId)) {
+      itemTags[itemId] = [...itemTags[itemId], groupId];
+    }
+    promises.push(fetch(`/receipts/${currentId}/items/${itemId}/tags`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({group_ids: itemTags[itemId]}),
+    }));
+  });
+  await Promise.all(promises);
+  // Re-render detail to update chip states
+  const data = await fetch(`/receipts/${currentId}`).then(r => r.json());
+  renderDetail(data);
+  sel.value = '';
+}
+
+async function clearAllTags() {
+  if (!currentId) return;
+  const rows = ge('items-list')?.querySelectorAll('.item-row[data-item-id]') || [];
+  const promises = [];
+  rows.forEach(row => {
+    const itemId = parseInt(row.dataset.itemId);
+    if (!itemId) return;
+    itemTags[itemId] = [];
+    promises.push(fetch(`/receipts/${currentId}/items/${itemId}/tags`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({group_ids: []}),
+    }));
+  });
+  await Promise.all(promises);
+  const data = await fetch(`/receipts/${currentId}`).then(r => r.json());
+  renderDetail(data);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function ge(id)    { return document.getElementById(id); }
+function esc(s)    { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(v)    { return Number(v).toFixed(2); }
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

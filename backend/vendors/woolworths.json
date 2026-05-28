@@ -1,0 +1,35 @@
+{
+  "name": "Woolworths",
+  "aliases": [
+    "woolworths", "woolworths pty", "woolworths (pty) ltd",
+    "woolworths food", "woolies"
+  ],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "grocery_and_clothing",
+  "vat_indicator": {
+    "type": "unknown",
+    "description": "PLACEHOLDER — needs a real Woolworths receipt to document VAT marking convention."
+  },
+  "quantity_rules": {
+    "description": "PLACEHOLDER — needs a real Woolworths receipt to document quantity patterns."
+  },
+  "product_name_rules": {
+    "description": "PLACEHOLDER — Woolworths product names tend to be longer and cleaner than discount grocers."
+  },
+  "weight_rules": {
+    "description": "PLACEHOLDER — needs a real Woolworths receipt to document weight handling."
+  },
+  "discount_rules": {
+    "description": "PLACEHOLDER — needs a real Woolworths receipt to document discount line format."
+  },
+  "store_name_rules": {
+    "description": "Always output 'Woolworths'.",
+    "always_output": "Woolworths"
+  },
+  "prompt_notes": [
+    "PLACEHOLDER — this vendor profile is incomplete. Extraction will use generic rules.",
+    "Woolworths sells both food and clothing/homeware — categorise accordingly."
+  ]
+}

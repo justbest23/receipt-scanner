@@ -1,0 +1,33 @@
+{
+  "name": "Unknown",
+  "aliases": [],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "unknown",
+  "vat_indicator": {
+    "type": "infer",
+    "description": "No vendor-specific VAT marking known. Infer from product category using South African zero-rating rules."
+  },
+  "quantity_rules": {
+    "description": "Quantity is 1 unless an explicit multiplier appears (e.g. '2 x', '2 @', 'Qty: 3')."
+  },
+  "product_name_rules": {
+    "description": "Use your best judgement to decode abbreviated product names into readable display names."
+  },
+  "weight_rules": {
+    "description": "Extract weight_kg if determinable from product name. Calculate per_kg_price = total_price / weight_kg when possible."
+  },
+  "discount_rules": {
+    "description": "Negative price lines are discounts. Include them with negative total_price and category=discount."
+  },
+  "store_name_rules": {
+    "description": "Use whatever store name appears on the receipt header.",
+    "always_output": null
+  },
+  "prompt_notes": [
+    "This is the generic fallback profile. Extract as much as possible using general reasoning.",
+    "Look for a tax breakdown table (RATE/TAX/GROSS/NET) if present and use it for VAT totals.",
+    "Look for an item count indicator like TOTAL [n] if present."
+  ]
+}

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Basket</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #363a40;
+      --text:       #e2e4e7;
+      --text-dim:   #6b7280;
+      --text-muted: #3f444c;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --purple-dim: #3b2a6e;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--border);
+      background: var(--surface); height: 52px; flex-shrink: 0;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-decoration: none; color: var(--text); }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    nav { display: flex; gap: 2px; margin-right: auto; margin-left: 24px; }
+    nav a { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; }
+    nav a.active, nav a:hover { color: var(--text); }
+    nav a.active { color: var(--purple); }
+    #user-nav { display: flex; align-items: center; margin-left: 16px; }
+
+    .main { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+    h2 { font-family: var(--mono); font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 20px; }
+
+    /* ── User table ── */
+    .user-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+    .user-table th {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--text-muted); text-align: left; padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .user-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+    .user-table tr:hover td { background: var(--surface2); }
+    .badge {
+      display: inline-block; padding: 2px 7px; border-radius: 2px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: .04em; margin-right: 3px;
+    }
+    .badge-admin  { background: rgba(167,139,250,.15); color: var(--purple); }
+    .badge-active { background: rgba(34,197,94,.12);  color: var(--green); }
+    .badge-off    { background: rgba(239,68,68,.12);  color: var(--red); }
+    .badge-perm   { background: rgba(249,115,22,.1);  color: var(--accent); }
+    .action-btn {
+      padding: 4px 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .04em;
+      border-radius: 2px; cursor: pointer; border: 1px solid var(--border2);
+      background: transparent; color: var(--text-dim); margin-right: 4px;
+      transition: border-color .15s, color .15s;
+    }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Forms ── */
+    .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 24px; margin-bottom: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-row { margin-bottom: 14px; }
+    .form-row label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px; }
+    .form-row input[type="text"],
+    .form-row input[type="password"] {
+      width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none;
+      transition: border-color .15s;
+    }
+    .form-row input:focus { border-color: var(--accent); }
+    .perms-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .perm-cb { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-dim); }
+    .perm-cb input { accent-color: var(--accent); cursor: pointer; }
+    .form-footer { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+    .btn-primary { padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: 3px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-cancel { padding: 9px 16px; background: transparent; border: 1px solid var(--border2); color: var(--text-dim); border-radius: 3px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; cursor: pointer; }
+    .toggle-admin { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+    .toggle-admin input { accent-color: var(--purple); cursor: pointer; }
+    .form-msg { font-family: var(--mono); font-size: 11px; padding: 8px 12px; border-radius: 3px; }
+    .form-msg.ok  { background: rgba(34,197,94,.1);  color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+    .form-msg.err { background: rgba(239,68,68,.1); color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 28px; width: 100%; max-width: 460px; }
+    .modal h3 { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+    .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16"><path d="M2 2h12l-1.5 9H3.5L2 2zm3 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+    </div>
+    <span>BASKET</span>
+  </a>
+  <nav>
+    <a href="/">Receipts</a>
+    <a href="/history">History</a>
+    <a href="/prices">Prices</a>
+    <a href="/meals">Meal Plan</a>
+    <a href="/analytics">Insights</a>
+    <a href="/admin" class="active">Admin</a>
+  </nav>
+  <div id="user-nav"></div>
+</header>
+
+<div class="main">
+  <h2>User Management</h2>
+
+  <table class="user-table" id="user-table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Display Name</th>
+        <th>Status</th>
+        <th>Permissions</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="user-tbody"></tbody>
+  </table>
+
+  <!-- Add / Edit form -->
+  <div class="form-card" id="form-card">
+    <h2 id="form-title">Add User</h2>
+    <div class="form-grid">
+      <div>
+        <div class="form-row">
+          <label>Username *</label>
+          <input type="text" id="f-username" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label id="f-pw-label">Password *</label>
+          <input type="password" id="f-password" autocomplete="new-password" placeholder="min 8 chars">
+        </div>
+      </div>
+      <div>
+        <div class="form-row">
+          <label>Display Name</label>
+          <input type="text" id="f-display" autocomplete="off">
+        </div>
+        <div class="form-row" style="margin-top:18px;">
+          <label class="toggle-admin">
+            <input type="checkbox" id="f-admin">
+            Administrator (all permissions)
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Permissions</label>
+      <div class="perms-grid" id="perms-grid"></div>
+    </div>
+    <div class="form-footer">
+      <button class="btn-primary" id="form-submit-btn" onclick="submitForm()">Create User</button>
+      <button class="btn-cancel" id="form-cancel-btn" style="display:none;" onclick="cancelEdit()">Cancel</button>
+      <span id="form-msg" class="form-msg" style="display:none;"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="del-modal">
+  <div class="modal">
+    <h3>Delete User</h3>
+    <p id="del-modal-text" style="font-size:13px;color:var(--text-dim);line-height:1.6;"></p>
+    <div class="modal-btns">
+      <button class="btn-primary" style="background:var(--red);" onclick="confirmDelete()">Delete</button>
+      <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script>
+  const ALL_PERMS = ['scan','history','prices','meals','analytics'];
+  let users = [];
+  let editingId = null;
+  let deletingId = null;
+
+  // Build permissions checkboxes
+  const pg = document.getElementById('perms-grid');
+  ALL_PERMS.forEach(p => {
+    const lbl = document.createElement('label');
+    lbl.className = 'perm-cb';
+    lbl.innerHTML = `<input type="checkbox" value="${p}" class="perm-check"> ${p}`;
+    pg.appendChild(lbl);
+  });
+
+  async function loadUsers() {
+    const res = await fetch('/admin/users');
+    if (!res.ok) return;
+    users = await res.json();
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('user-tbody');
+    tbody.innerHTML = '';
+    users.forEach(u => {
+      const tr = document.createElement('tr');
+      const perms = (u.permissions || []).map(p =>
+        `<span class="badge badge-perm">${p}</span>`).join('');
+      const statusBadge = u.is_active
+        ? '<span class="badge badge-active">Active</span>'
+        : '<span class="badge badge-off">Inactive</span>';
+      const adminBadge = u.is_admin ? '<span class="badge badge-admin">Admin</span>' : '';
+      const created = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+      tr.innerHTML = `
+        <td style="font-family:var(--mono);font-size:12px;">${esc(u.username)}</td>
+        <td>${esc(u.display_name || '—')}</td>
+        <td>${statusBadge}${adminBadge}</td>
+        <td>${u.is_admin ? '<span style="color:var(--text-muted);font-size:11px;">all</span>' : perms}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">${created}</td>
+        <td>
+          <button class="action-btn" onclick="startEdit(${u.id})">Edit</button>
+          <button class="action-btn danger" onclick="openDeleteModal(${u.id})">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function getCheckedPerms() {
+    return [...document.querySelectorAll('.perm-check:checked')].map(c => c.value);
+  }
+
+  function setCheckedPerms(perms) {
+    document.querySelectorAll('.perm-check').forEach(c => {
+      c.checked = (perms || []).includes(c.value);
+    });
+  }
+
+  function startEdit(id) {
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+    editingId = id;
+    document.getElementById('form-title').textContent = 'Edit User';
+    document.getElementById('f-username').value   = u.username;
+    document.getElementById('f-username').disabled = true;
+    document.getElementById('f-password').value   = '';
+    document.getElementById('f-pw-label').textContent = 'New Password (leave blank to keep)';
+    document.getElementById('f-display').value    = u.display_name || '';
+    document.getElementById('f-admin').checked    = u.is_admin;
+    setCheckedPerms(u.permissions);
+    document.getElementById('form-submit-btn').textContent = 'Save Changes';
+    document.getElementById('form-cancel-btn').style.display = '';
+    hideMsg();
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    document.getElementById('form-title').textContent = 'Add User';
+    document.getElementById('f-username').value   = '';
+    document.getElementById('f-username').disabled = false;
+    document.getElementById('f-password').value   = '';
+    document.getElementById('f-pw-label').textContent = 'Password *';
+    document.getElementById('f-display').value    = '';
+    document.getElementById('f-admin').checked    = false;
+    setCheckedPerms([]);
+    document.getElementById('form-submit-btn').textContent = 'Create User';
+    document.getElementById('form-cancel-btn').style.display = 'none';
+    hideMsg();
+  }
+
+  async function submitForm() {
+    const username    = document.getElementById('f-username').value.trim();
+    const password    = document.getElementById('f-password').value;
+    const displayName = document.getElementById('f-display').value.trim();
+    const isAdmin     = document.getElementById('f-admin').checked;
+    const permissions = getCheckedPerms();
+    hideMsg();
+
+    if (editingId) {
+      const body = { display_name: displayName, is_admin: isAdmin, permissions };
+      if (password) body.password = password;
+      const res = await fetch(`/admin/users/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('ok', 'User updated.');
+        cancelEdit();
+        loadUsers();
+      } else {
+        showMsg('err', data.detail || 'Update failed.');
+      }
+    } else {
+      if (!username || !password) return showMsg('err', 'Username and password are required.');
+      const res = await fetch('/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, display_name: displayName, is_admin: isAdmin, permissions }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('ok', `User "${username}" created.`);
+        cancelEdit();
+        loadUsers();
+      } else {
+        showMsg('err', data.detail || 'Create failed.');
+      }
+    }
+  }
+
+  function openDeleteModal(id) {
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+    deletingId = id;
+    document.getElementById('del-modal-text').textContent =
+      `Delete user "${u.username}"? This cannot be undone. Their receipts and recipes will remain in the database.`;
+    document.getElementById('del-modal').classList.add('open');
+  }
+
+  function closeDeleteModal() {
+    deletingId = null;
+    document.getElementById('del-modal').classList.remove('open');
+  }
+
+  async function confirmDelete() {
+    if (!deletingId) return;
+    const res = await fetch(`/admin/users/${deletingId}`, { method: 'DELETE' });
+    closeDeleteModal();
+    if (res.ok) {
+      loadUsers();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.detail || 'Delete failed.');
+    }
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('form-msg');
+    el.className = `form-msg ${type}`;
+    el.textContent = text;
+    el.style.display = '';
+  }
+
+  function hideMsg() {
+    document.getElementById('form-msg').style.display = 'none';
+  }
+
+  // Close modal on overlay click
+  document.getElementById('del-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeDeleteModal();
+  });
+
+  loadUsers();
+</script>
+</body>
+</html>

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Household — Basket</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #363a40;
+      --text:       #e2e4e7;
+      --text-dim:   #6b7280;
+      --text-muted: #3f444c;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --teal:       #2dd4bf;
+      --blue:       #60a5fa;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+    header {
+      display: flex; align-items: center;
+      padding: 12px 24px; border-bottom: 1px solid var(--border);
+      background: var(--surface); height: 52px; flex-shrink: 0; gap: 0;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-decoration: none; color: var(--text); }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    nav { display: flex; gap: 2px; margin-right: auto; margin-left: 24px; }
+    .nav-link { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; }
+    .nav-link.active { color: var(--accent); background: rgba(249,115,22,.08); }
+    #user-nav { display: flex; align-items: center; margin-left: 16px; }
+
+    /* ── Layout ── */
+    .workspace { display: flex; height: calc(100vh - 52px); }
+
+    /* ── Left sidebar ── */
+    .sidebar {
+      width: 280px; flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sidebar-head {
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      font-family: var(--mono); font-size: 10px; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-dim);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .hh-list { flex: 1; overflow-y: auto; }
+    .hh-list::-webkit-scrollbar { width: 3px; }
+    .hh-list::-webkit-scrollbar-thumb { background: var(--border2); }
+    .hh-item {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .1s;
+    }
+    .hh-item:hover { background: var(--surface2); }
+    .hh-item.active { background: var(--surface2); border-left: 2px solid var(--accent); }
+    .hh-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+    .hh-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+    .hh-role { display: inline-block; padding: 1px 5px; border-radius: 2px; font-size: 9px; letter-spacing: .04em; margin-left: 6px; }
+    .hh-role.admin { background: rgba(249,115,22,.15); color: var(--accent); }
+    .hh-role.member { background: rgba(107,114,128,.1); color: var(--text-dim); }
+
+    /* Join section */
+    .join-section {
+      padding: 14px 16px; border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .join-label { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+    .join-row { display: flex; gap: 6px; }
+    .join-input {
+      flex: 1; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 13px;
+      letter-spacing: .06em; text-transform: uppercase; outline: none;
+      transition: border-color .15s;
+    }
+    .join-input:focus { border-color: var(--accent); }
+    .join-input::placeholder { text-transform: none; letter-spacing: 0; }
+    .btn-sm {
+      padding: 7px 12px; font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
+      text-transform: uppercase; border-radius: 3px; cursor: pointer; border: 1px solid var(--border2);
+      background: transparent; color: var(--text-dim); transition: border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-sm.primary:hover { opacity: .88; }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Main panel ── */
+    .main { flex: 1; overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 3px; }
+    .main::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; gap: 12px; color: var(--text-muted);
+    }
+    .empty-state svg { width: 48px; height: 48px; opacity: .3; }
+    .empty-state p { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; }
+    .empty-state button { margin-top: 8px; }
+
+    /* Household header */
+    .hh-header {
+      padding: 20px 28px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    }
+    .hh-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .hh-subtitle { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+    .hh-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* Members bar */
+    .members-bar {
+      padding: 12px 28px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .member-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 20px; font-size: 12px;
+      border: 1px solid var(--border2); background: var(--surface2);
+    }
+    .member-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .member-chip .role-tag { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 28px; }
+    .tab {
+      padding: 10px 16px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--text-dim); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Tab content */
+    .tab-content { padding: 24px 28px; display: none; }
+    .tab-content.active { display: block; }
+
+    /* Totals row */
+    .totals-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 16px;
+    }
+    .stat-label { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+    .stat-value { font-size: 22px; font-weight: 600; }
+    .stat-value.mono { font-family: var(--mono); font-size: 18px; }
+
+    /* Member breakdown */
+    .section-title { font-family: var(--mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 14px; }
+    .member-bars { margin-bottom: 32px; }
+    .mb-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .mb-name { width: 140px; font-size: 13px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mb-bar-wrap { flex: 1; height: 18px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+    .mb-bar { height: 100%; border-radius: 2px; transition: width .4s; }
+    .mb-amount { width: 90px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+    .mb-count { width: 60px; text-align: right; font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+
+    /* Store breakdown */
+    .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 32px; }
+    .store-card { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 12px; }
+    .store-card-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .store-card-total { font-family: var(--mono); font-size: 14px; color: var(--accent); }
+    .store-card-count { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* History */
+    .receipt-table { width: 100%; border-collapse: collapse; }
+    .receipt-table th {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--text-muted); text-align: left; padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .receipt-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .receipt-table tr:hover td { background: var(--surface2); }
+    .member-label {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    }
+    .pagination { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+
+    /* Invite code box */
+    .invite-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      padding: 16px; margin-bottom: 24px;
+    }
+    .invite-code-display {
+      font-family: var(--mono); font-size: 28px; letter-spacing: .18em;
+      color: var(--accent); margin: 10px 0 6px;
+    }
+    .invite-expiry { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
+    .invite-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 28px; width: 100%; max-width: 400px; }
+    .modal h3 { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+    .modal input {
+      width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 13px;
+      outline: none; margin-bottom: 14px; transition: border-color .15s;
+    }
+    .modal input:focus { border-color: var(--accent); }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-msg { font-family: var(--mono); font-size: 11px; padding: 8px 10px; border-radius: 3px; margin-bottom: 12px; }
+    .modal-msg.err { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16"><path d="M2 2h12l-1.5 9H3.5L2 2zm3 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+    </div>
+    <span>BASKET</span>
+  </a>
+  <nav>
+    <a class="nav-link" href="/">Receipts</a>
+    <a class="nav-link" href="/history">History</a>
+    <a class="nav-link" href="/prices">Prices</a>
+    <a class="nav-link" href="/meals">Meal Plan</a>
+    <a class="nav-link" href="/analytics">Insights</a>
+    <a class="nav-link active" href="/household">Household</a>
+    <a class="nav-link" href="/spend-groups">Spend</a>
+  </nav>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+</header>
+
+<div class="workspace">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <span>Households</span>
+      <button class="btn-sm primary" onclick="openCreateModal()">+ New</button>
+    </div>
+    <div class="hh-list" id="hh-list"></div>
+    <div class="join-section">
+      <div class="join-label">Join with invite code</div>
+      <div class="join-row">
+        <input class="join-input" id="join-code" type="text" maxlength="8" placeholder="Enter code…" autocomplete="off">
+        <button class="btn-sm primary" onclick="joinHousehold()">Join</button>
+      </div>
+      <div id="join-msg" style="font-family:var(--mono);font-size:10px;margin-top:6px;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Main panel -->
+  <div class="main" id="main">
+    <div class="empty-state" id="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <p>No household selected</p>
+      <p style="font-size:11px;color:var(--text-muted);">Create one or join with an invite code</p>
+    </div>
+    <div id="hh-detail" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Create Household Modal -->
+<div class="modal-overlay" id="create-modal">
+  <div class="modal">
+    <h3>Create Household</h3>
+    <div id="create-msg" class="modal-msg err" style="display:none;"></div>
+    <input type="text" id="create-name" placeholder="e.g. Smith Family" autocomplete="off" maxlength="80">
+    <div class="modal-btns">
+      <button class="btn-sm primary" onclick="createHousehold()">Create</button>
+      <button class="btn-sm" onclick="closeModal('create-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal-overlay" id="rename-modal">
+  <div class="modal">
+    <h3>Rename Household</h3>
+    <div id="rename-msg" class="modal-msg err" style="display:none;"></div>
+    <input type="text" id="rename-input" autocomplete="off" maxlength="80">
+    <div class="modal-btns">
+      <button class="btn-sm primary" onclick="renameHousehold()">Save</button>
+      <button class="btn-sm" onclick="closeModal('rename-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete/Leave confirm modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <h3 id="confirm-title">Confirm</h3>
+    <p id="confirm-text" style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;"></p>
+    <div class="modal-btns">
+      <button class="btn-sm" style="border-color:var(--red);color:var(--red);" onclick="confirmAction()">Confirm</button>
+      <button class="btn-sm" onclick="closeModal('confirm-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script>
+  // ── Member colours ────────────────────────────────────────────────────────
+  const MEMBER_COLOURS = [
+    '#f97316','#a78bfa','#2dd4bf','#60a5fa','#22c55e',
+    '#eab308','#f472b6','#fb7185','#34d399','#818cf8',
+  ];
+  const colourFor = (() => {
+    const map = {};
+    let idx = 0;
+    return (uid) => {
+      if (!(uid in map)) map[uid] = MEMBER_COLOURS[idx++ % MEMBER_COLOURS.length];
+      return map[uid];
+    };
+  })();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let households = [];
+  let selectedId = null;
+  let currentDetail = null;
+  let currentAnalytics = null;
+  let historyPage = 0;
+  let historyTotal = 0;
+  const PAGE_SIZE = 40;
+  let confirmFn = null;
+  let me = null;  // current user from /auth/me
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    const res = await fetch('/auth/me');
+    if (res.ok) me = await res.json();
+    await loadHouseholds();
+  });
+
+  async function loadHouseholds() {
+    const res = await fetch('/households');
+    if (!res.ok) return;
+    households = await res.json();
+    renderSidebar();
+    if (selectedId) selectHousehold(selectedId);
+    else renderEmpty();
+  }
+
+  function renderSidebar() {
+    const el = document.getElementById('hh-list');
+    if (!households.length) {
+      el.innerHTML = '<div style="padding:20px 16px;font-size:12px;color:var(--text-muted);font-family:var(--mono);">No households yet.</div>';
+      return;
+    }
+    el.innerHTML = households.map(h => `
+      <div class="hh-item${h.id === selectedId ? ' active' : ''}" onclick="selectHousehold(${h.id})">
+        <div class="hh-name">${esc(h.name)}<span class="hh-role ${h.my_role}">${h.my_role}</span></div>
+        <div class="hh-meta">${h.member_count} member${h.member_count !== 1 ? 's' : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderEmpty() {
+    document.getElementById('empty-state').style.display = '';
+    document.getElementById('hh-detail').style.display = 'none';
+  }
+
+  async function selectHousehold(id) {
+    selectedId = id;
+    historyPage = 0;
+    renderSidebar();
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('hh-detail').style.display = '';
+    document.getElementById('hh-detail').innerHTML = '<div style="padding:40px;color:var(--text-muted);font-family:var(--mono);font-size:11px;">Loading…</div>';
+
+    const [detailRes, analyticsRes] = await Promise.all([
+      fetch(`/households/${id}`),
+      fetch(`/households/${id}/analytics`),
+    ]);
+    if (!detailRes.ok) { renderEmpty(); return; }
+    currentDetail   = await detailRes.json();
+    currentAnalytics = analyticsRes.ok ? await analyticsRes.json() : null;
+
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const hh = currentDetail;
+    const an = currentAnalytics;
+    const isAdmin = hh.my_role === 'admin' || (me && me.is_admin);
+
+    const membersHtml = hh.members.map(m => {
+      const col = colourFor(m.user_id);
+      const label = m.display_name || m.username;
+      return `<div class="member-chip">
+        <div class="member-dot" style="background:${col};"></div>
+        <span>${esc(label)}</span>
+        ${m.role === 'admin' ? '<span class="role-tag">admin</span>' : ''}
+      </div>`;
+    }).join('');
+
+    const inviteHtml = isAdmin ? `
+      <div class="invite-box" id="invite-box">
+        ${hh.invite
+          ? `<div class="section-title">Invite Code</div>
+             <div class="invite-code-display">${formatCode(hh.invite.code)}</div>
+             <div class="invite-expiry">Expires ${formatExpiry(hh.invite.expires_at)}</div>
+             <div class="invite-actions">
+               <button class="btn-sm" onclick="copyCode('${hh.invite.code}')">Copy Code</button>
+               <button class="btn-sm" onclick="generateInvite()">New Code</button>
+               <button class="btn-sm danger" onclick="deactivateInvite()">Deactivate</button>
+             </div>`
+          : `<div class="section-title">Invite Members</div>
+             <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Generate an invite code to share with people you want to add.</p>
+             <button class="btn-sm primary" onclick="generateInvite()">Generate Invite Code</button>`
+        }
+      </div>` : '';
+
+    document.getElementById('hh-detail').innerHTML = `
+      <div class="hh-header">
+        <div>
+          <div class="hh-title">${esc(hh.name)}</div>
+          <div class="hh-subtitle">${hh.member_count} member${hh.member_count !== 1 ? 's' : ''} · created ${formatDate(hh.created_at)}</div>
+        </div>
+        <div class="hh-actions">
+          ${isAdmin ? `<button class="btn-sm" onclick="openRenameModal()">Rename</button>` : ''}
+          ${isAdmin ? `<button class="btn-sm danger" onclick="openDeleteModal()">Delete</button>` : ''}
+          ${!isAdmin ? `<button class="btn-sm danger" onclick="openLeaveModal()">Leave</button>` : ''}
+        </div>
+      </div>
+      <div class="members-bar">${membersHtml}</div>
+      <div class="tabs">
+        <div class="tab active" id="tab-overview" onclick="switchTab('overview')">Overview</div>
+        <div class="tab" id="tab-history" onclick="switchTab('history')">History</div>
+        ${isAdmin ? `<div class="tab" id="tab-members" onclick="switchTab('members')">Members</div>` : ''}
+      </div>
+      <div class="tab-content active" id="tc-overview">
+        ${renderOverviewTab(an, inviteHtml)}
+      </div>
+      <div class="tab-content" id="tc-history">
+        <div id="history-content"></div>
+      </div>
+      ${isAdmin ? `<div class="tab-content" id="tc-members">${renderMembersTab(hh)}</div>` : ''}
+    `;
+  }
+
+  function renderOverviewTab(an, inviteHtml) {
+    if (!an) return '<p style="color:var(--text-muted);font-family:var(--mono);font-size:11px;">No analytics available.</p>';
+    const t = an.totals;
+    const maxSpend = Math.max(...an.members.map(m => m.total_spend), 1);
+
+    const memberBars = an.members.map(m => {
+      const col = colourFor(m.user_id);
+      const label = m.display_name || m.username;
+      const pct = maxSpend > 0 ? (m.total_spend / maxSpend * 100) : 0;
+      return `<div class="mb-row">
+        <div class="mb-name" title="${esc(m.username)}">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};margin-right:6px;"></span>${esc(label)}
+        </div>
+        <div class="mb-bar-wrap"><div class="mb-bar" style="width:${pct}%;background:${col};opacity:.8;"></div></div>
+        <div class="mb-amount">R${m.total_spend.toFixed(2)}</div>
+        <div class="mb-count">${m.receipt_count} receipt${m.receipt_count !== 1 ? 's' : ''}</div>
+      </div>`;
+    }).join('');
+
+    const storeCards = an.by_store.map(s => `
+      <div class="store-card">
+        <div class="store-card-name" title="${esc(s.store || 'Unknown')}">${esc(s.store || 'Unknown')}</div>
+        <div class="store-card-total">R${s.total.toFixed(2)}</div>
+        <div class="store-card-count">${s.receipt_count} receipt${s.receipt_count !== 1 ? 's' : ''}</div>
+      </div>
+    `).join('');
+
+    return `
+      ${inviteHtml}
+      <div class="totals-row">
+        <div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-value mono">R${t.total_spend.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="stat-label">Receipts</div><div class="stat-value">${t.receipt_count}</div></div>
+        <div class="stat-card"><div class="stat-label">Members</div><div class="stat-value">${t.member_count}</div></div>
+        <div class="stat-card"><div class="stat-label">Avg / Member</div><div class="stat-value mono">R${t.avg_per_member.toFixed(2)}</div></div>
+      </div>
+      <div class="member-bars">
+        <div class="section-title">Spend by member</div>
+        ${memberBars || '<p style="color:var(--text-muted);font-size:12px;">No receipts yet.</p>'}
+      </div>
+      ${an.by_store.length ? `
+      <div>
+        <div class="section-title">By store</div>
+        <div class="store-grid">${storeCards}</div>
+      </div>` : ''}
+    `;
+  }
+
+  function renderMembersTab(hh) {
+    const isAdmin = hh.my_role === 'admin' || (me && me.is_admin);
+    return `<table class="receipt-table" style="max-width:600px;">
+      <thead><tr>
+        <th>Member</th><th>Role</th><th>Joined</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${hh.members.map(m => {
+          const label = m.display_name || m.username;
+          const isMe = me && m.user_id === me.id;
+          return `<tr>
+            <td>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colourFor(m.user_id)};margin-right:8px;"></span>
+              ${esc(label)} ${isMe ? '<span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">(you)</span>' : ''}
+            </td>
+            <td>
+              <select onchange="changeRole(${m.user_id}, this.value)" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:2px;font-size:12px;" ${!isAdmin || isMe ? 'disabled' : ''}>
+                <option value="member" ${m.role === 'member' ? 'selected' : ''}>Member</option>
+                <option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Admin</option>
+              </select>
+            </td>
+            <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">${formatDate(m.joined_at)}</td>
+            <td>
+              ${isAdmin && !isMe ? `<button class="btn-sm danger" onclick="removeMember(${m.user_id}, '${esc(label)}')">Remove</button>` : ''}
+              ${isMe && m.role !== 'admin' ? `<button class="btn-sm danger" onclick="openLeaveModal()">Leave</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  async function loadHistory() {
+    const res = await fetch(`/households/${selectedId}/history?skip=${historyPage * PAGE_SIZE}&limit=${PAGE_SIZE}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    historyTotal = data.total;
+    const el = document.getElementById('history-content');
+    if (!data.receipts.length) {
+      el.innerHTML = '<p style="color:var(--text-muted);font-family:var(--mono);font-size:11px;">No receipts yet.</p>';
+      return;
+    }
+    el.innerHTML = `
+      <table class="receipt-table">
+        <thead><tr><th>Member</th><th>Store</th><th>Date</th><th style="text-align:right;">Total</th><th>Items</th></tr></thead>
+        <tbody>
+          ${data.receipts.map(r => {
+            const col = colourFor(r.user_id);
+            const label = r.member_display_name || r.member_username || '?';
+            return `<tr>
+              <td><span class="member-label" style="background:${col}22;border:1px solid ${col}44;">
+                <span style="width:7px;height:7px;border-radius:50%;background:${col};display:inline-block;"></span>
+                ${esc(label)}
+              </span></td>
+              <td>${esc(r.store || '—')}</td>
+              <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim);">${r.date || '—'}</td>
+              <td style="text-align:right;font-family:var(--mono);font-size:12px;">${r.total != null ? 'R' + r.total.toFixed(2) : '—'}</td>
+              <td style="color:var(--text-muted);font-size:12px;">${r.item_count}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <div class="pagination">
+        <button class="btn-sm" onclick="prevPage()" ${historyPage === 0 ? 'disabled style="opacity:.4;"' : ''}>← Prev</button>
+        <span>${historyPage * PAGE_SIZE + 1}–${Math.min((historyPage + 1) * PAGE_SIZE, historyTotal)} of ${historyTotal}</span>
+        <button class="btn-sm" onclick="nextPage()" ${(historyPage + 1) * PAGE_SIZE >= historyTotal ? 'disabled style="opacity:.4;"' : ''}>Next →</button>
+      </div>`;
+  }
+
+  function switchTab(name) {
+    ['overview', 'history', 'members'].forEach(n => {
+      const tab = document.getElementById(`tab-${n}`);
+      const tc  = document.getElementById(`tc-${n}`);
+      if (tab) tab.classList.toggle('active', n === name);
+      if (tc)  tc.classList.toggle('active', n === name);
+    });
+    if (name === 'history' && !document.getElementById('history-content')?.innerHTML) {
+      loadHistory();
+    }
+  }
+
+  function prevPage() { if (historyPage > 0) { historyPage--; loadHistory(); } }
+  function nextPage() { if ((historyPage + 1) * PAGE_SIZE < historyTotal) { historyPage++; loadHistory(); } }
+
+  // ── Create / join ─────────────────────────────────────────────────────────
+  function openCreateModal() {
+    document.getElementById('create-name').value = '';
+    document.getElementById('create-msg').style.display = 'none';
+    document.getElementById('create-modal').classList.add('open');
+    setTimeout(() => document.getElementById('create-name').focus(), 50);
+  }
+
+  async function createHousehold() {
+    const name = document.getElementById('create-name').value.trim();
+    const msg = document.getElementById('create-msg');
+    if (!name) { msg.textContent = 'Name required.'; msg.style.display = ''; return; }
+    const res = await fetch('/households', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.textContent = data.detail || 'Failed.'; msg.style.display = ''; return; }
+    closeModal('create-modal');
+    await loadHouseholds();
+    selectHousehold(data.id);
+  }
+
+  async function joinHousehold() {
+    const code = document.getElementById('join-code').value.trim().toUpperCase();
+    const msg  = document.getElementById('join-msg');
+    msg.style.display = 'none';
+    if (!code) return;
+    const res = await fetch('/households/join', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      msg.textContent = data.detail || 'Invalid code.';
+      msg.style.color = 'var(--red)';
+      msg.style.display = '';
+      return;
+    }
+    document.getElementById('join-code').value = '';
+    msg.textContent = `Joined "${data.name}"!`;
+    msg.style.color = 'var(--green)';
+    msg.style.display = '';
+    await loadHouseholds();
+    selectHousehold(data.id);
+  }
+
+  document.getElementById('join-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter') joinHousehold();
+  });
+  document.getElementById('create-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') createHousehold();
+  });
+
+  // ── Invite ────────────────────────────────────────────────────────────────
+  async function generateInvite() {
+    const res = await fetch(`/households/${selectedId}/invite`, { method: 'POST' });
+    if (!res.ok) return;
+    const data = await res.json();
+    currentDetail.invite = data;
+    renderDetail();
+  }
+
+  async function deactivateInvite() {
+    await fetch(`/households/${selectedId}/invite`, { method: 'DELETE' });
+    currentDetail.invite = null;
+    renderDetail();
+  }
+
+  function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy Code'; }, 1500);
+    });
+  }
+
+  // ── Rename ────────────────────────────────────────────────────────────────
+  function openRenameModal() {
+    document.getElementById('rename-input').value = currentDetail.name;
+    document.getElementById('rename-msg').style.display = 'none';
+    document.getElementById('rename-modal').classList.add('open');
+    setTimeout(() => document.getElementById('rename-input').focus(), 50);
+  }
+
+  async function renameHousehold() {
+    const name = document.getElementById('rename-input').value.trim();
+    const msg = document.getElementById('rename-msg');
+    if (!name) { msg.textContent = 'Name required.'; msg.style.display = ''; return; }
+    const res = await fetch(`/households/${selectedId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) { const d = await res.json(); msg.textContent = d.detail || 'Failed.'; msg.style.display = ''; return; }
+    closeModal('rename-modal');
+    currentDetail.name = name;
+    await loadHouseholds();
+    renderDetail();
+  }
+
+  document.getElementById('rename-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') renameHousehold();
+  });
+
+  // ── Delete / Leave / Remove member ───────────────────────────────────────
+  function openDeleteModal() {
+    document.getElementById('confirm-title').textContent = 'Delete Household';
+    document.getElementById('confirm-text').textContent =
+      `Delete "${currentDetail.name}"? All members will be removed. This cannot be undone.`;
+    confirmFn = async () => {
+      await fetch(`/households/${selectedId}`, { method: 'DELETE' });
+      closeModal('confirm-modal');
+      selectedId = null;
+      await loadHouseholds();
+      renderEmpty();
+    };
+    document.getElementById('confirm-modal').classList.add('open');
+  }
+
+  function openLeaveModal() {
+    document.getElementById('confirm-title').textContent = 'Leave Household';
+    document.getElementById('confirm-text').textContent =
+      `Leave "${currentDetail.name}"? You will need a new invite code to rejoin.`;
+    confirmFn = async () => {
+      const res = await fetch(`/households/${selectedId}/leave`, { method: 'DELETE' });
+      closeModal('confirm-modal');
+      if (res.ok) {
+        selectedId = null;
+        await loadHouseholds();
+        renderEmpty();
+      }
+    };
+    document.getElementById('confirm-modal').classList.add('open');
+  }
+
+  function removeMember(userId, label) {
+    document.getElementById('confirm-title').textContent = 'Remove Member';
+    document.getElementById('confirm-text').textContent = `Remove ${label} from this household?`;
+    confirmFn = async () => {
+      await fetch(`/households/${selectedId}/members/${userId}`, { method: 'DELETE' });
+      closeModal('confirm-modal');
+      await selectHousehold(selectedId);
+    };
+    document.getElementById('confirm-modal').classList.add('open');
+  }
+
+  async function changeRole(userId, role) {
+    await fetch(`/households/${selectedId}/members/${userId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    await selectHousehold(selectedId);
+  }
+
+  function confirmAction() { if (confirmFn) confirmFn(); }
+
+  // ── Modals ────────────────────────────────────────────────────────────────
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-ZA', { year:'numeric', month:'short', day:'numeric' });
+  }
+  function formatExpiry(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const diff = d - Date.now();
+    if (diff < 0) return 'expired';
+    const h = Math.round(diff / 36e5);
+    if (h < 24) return `in ${h}h`;
+    return `in ${Math.round(h/24)}d`;
+  }
+  function formatCode(code) {
+    return code.slice(0,4) + '-' + code.slice(4);
+  }
+</script>
+</body>
+</html>

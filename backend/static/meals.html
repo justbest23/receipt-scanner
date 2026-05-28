@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meal Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #363a40;
+      --text:       #e2e4e7;
+      --text-dim:   #6b7280;
+      --text-muted: #3f444c;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --teal:       #2dd4bf;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+      --checkers:   #e31837;
+      --woolworths: #008000;
+      --pnp:        #cc0000;
+      --spar:       #007a3d;
+      --uitkyk:     #c9a84c;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+    /* ── Nav ── */
+    header { display: flex; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); height: 52px; flex-shrink: 0; padding: 0 24px; }
+    .logo  { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; margin-right: 28px; text-decoration: none; color: var(--text); }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    nav { display: flex; gap: 2px; }
+    .nav-link { padding: 6px 16px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; transition: color .2s, background .2s; }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .nav-link.active { color: var(--accent); background: rgba(249,115,22,.08); }
+
+    /* ── Three-panel layout ── */
+    .workspace { display: grid; grid-template-columns: 270px 1fr 340px; height: calc(100vh - 52px); }
+    .panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel:last-child { border-right: none; }
+    .ph { padding: 9px 16px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; color: var(--text-dim); text-transform: uppercase; flex-shrink: 0; }
+    .pn { font-size: 9px; color: var(--accent); border: 1px solid var(--accent-dim); padding: 1px 4px; }
+    .ph-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+    .pb { flex: 1; overflow-y: auto; }
+    .pb::-webkit-scrollbar { width: 3px; }
+    .pb::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    /* ── Shared input/button atoms ── */
+    .inp {
+      width: 100%; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--sans); font-size: 13px; border-radius: 2px;
+      outline: none; transition: border-color .2s;
+    }
+    .inp:focus { border-color: var(--accent); }
+    .inp::placeholder { color: var(--text-muted); }
+    .btn-primary {
+      padding: 7px 14px; background: var(--accent); color: #000; font-family: var(--mono);
+      font-size: 10px; letter-spacing: .06em; text-transform: uppercase; border: none;
+      cursor: pointer; border-radius: 2px; transition: opacity .2s; white-space: nowrap;
+    }
+    .btn-primary:hover { opacity: .85; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-ghost {
+      padding: 4px 10px; background: transparent; border: 1px solid var(--border);
+      color: var(--text-dim); font-family: var(--mono); font-size: 9px;
+      cursor: pointer; border-radius: 2px; transition: all .15s; white-space: nowrap;
+    }
+    .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+    .btn-danger:hover { border-color: var(--red) !important; color: var(--red) !important; }
+    select.inp option { background: var(--surface2); }
+
+    /* ── Panel 1: Recipe list ── */
+    .recipe-item {
+      padding: 10px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
+      display: flex; align-items: flex-start; gap: 10px; transition: background .12s;
+    }
+    .recipe-item:hover { background: var(--surface2); }
+    .recipe-item.active { background: var(--surface3); border-left: 2px solid var(--accent); padding-left: 14px; }
+    .ri-check {
+      width: 15px; height: 15px; border: 1px solid var(--border2); border-radius: 2px;
+      cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: all .12s; display: grid; place-items: center;
+    }
+    .ri-check.checked { background: var(--accent); border-color: var(--accent); color: #000; font-size: 9px; }
+    .ri-body { flex: 1; min-width: 0; }
+    .ri-name { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ri-meta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; display: flex; gap: 6px; align-items: center; }
+    .ri-src  { color: var(--accent); font-size: 9px; }
+    .list-empty { padding: 32px 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); line-height: 1.9; }
+
+    /* ── Panel 1 bottom: create/import form ── */
+    .create-area { border-top: 1px solid var(--border); flex-shrink: 0; }
+    .create-tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .create-tab {
+      flex: 1; padding: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
+      text-transform: uppercase; background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; transition: color .15s; border-bottom: 2px solid transparent;
+    }
+    .create-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .create-body { padding: 12px 14px; }
+    .create-row  { display: flex; gap: 6px; margin-top: 6px; }
+    .srv-input { width: 70px; flex-shrink: 0; }
+    .url-hint { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+    .url-hint a { color: var(--accent); }
+
+    /* ── Panel 2: Recipe editor — tabs ── */
+    .editor-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
+    .editor-tab {
+      padding: 8px 16px; font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
+      text-transform: uppercase; background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s;
+    }
+    .editor-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Ingredient list ── */
+    .ingredients-section { padding: 12px 16px; }
+    .ing-section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); }
+    .ing-row {
+      display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+      border: 1px solid var(--border); border-radius: 2px; background: var(--surface2);
+      margin-bottom: 5px; transition: border-color .15s;
+    }
+    .ing-row:hover { border-color: var(--border2); }
+    .ing-name { flex: 1; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ing-qty  { font-family: var(--mono); font-size: 11px; color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+    .ing-del  { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+    .ing-del:hover { color: var(--red); }
+    .no-ingredients { padding: 16px 0; font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+
+    /* ── Add ingredient form (bottom of editor panel) ── */
+    .add-ing-bar { padding: 10px 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; display: none; }
+    .add-ing-bar.visible { display: block; }
+    .add-ing-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 6px; }
+    .add-ing-row  { display: flex; gap: 6px; }
+    .aif-name { flex: 1; }
+    .aif-qty  { width: 68px; flex-shrink: 0; }
+    .aif-unit { width: 78px; flex-shrink: 0; }
+
+    /* ── Instructions tab ── */
+    .instructions-section { padding: 16px; height: 100%; display: flex; flex-direction: column; }
+    .instructions-source { font-family: var(--mono); font-size: 10px; margin-bottom: 10px; }
+    .instructions-source a { color: var(--accent); }
+    .instructions-text {
+      flex: 1; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; font-size: 13px; line-height: 1.8; color: var(--text); white-space: pre-wrap;
+      overflow-y: auto; font-family: var(--sans);
+    }
+    .instructions-empty { color: var(--text-muted); font-family: var(--mono); font-size: 11px; padding: 24px 0; }
+    .instructions-edit {
+      width: 100%; flex: 1; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; font-size: 13px; line-height: 1.8; color: var(--text);
+      font-family: var(--sans); resize: none; outline: none;
+    }
+    .instructions-edit:focus { border-color: var(--accent); }
+    .instructions-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+    /* ── Panel 2 empty state ── */
+    .editor-empty { padding: 60px 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 2; }
+
+    /* ── Panel 3: Shopping list ── */
+    .shopping-empty { padding: 40px 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); line-height: 2; }
+    .shopping-item { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+    .si-name { font-weight: 500; font-size: 13px; margin-bottom: 3px; }
+    .si-qty  { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-bottom: 5px; }
+    .si-cheapest { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: rgba(34,197,94,.05); border: 1px solid rgba(34,197,94,.15); border-radius: 2px; }
+    .si-best-store { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .si-best-product { font-size: 11px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .si-best-price { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+    .si-others { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+    .si-other-pill { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 2px; border: 1px solid var(--border2); color: var(--text-muted); }
+    .si-no-price { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .si-no-price a { color: var(--accent); }
+
+    .store-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .store-checkers   { background: var(--checkers); }
+    .store-woolworths { background: var(--woolworths); }
+    .store-pnp        { background: var(--pnp); }
+    .store-spar       { background: var(--spar); }
+    .store-uitkyk     { background: var(--uitkyk); }
+
+    /* ── Shopping list footer: store totals ── */
+    .store-totals { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; display: none; }
+    .st-hdr { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 8px; }
+    .st-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .st-name { flex: 1; font-family: var(--mono); font-size: 11px; }
+    .st-amount { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+    .st-best { color: var(--green); }
+
+    .load-btn { width: 100%; padding: 9px; margin-top: 6px; background: transparent; border: 1px solid var(--border2); color: var(--text-dim); font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: all .15s; }
+    .load-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .pulsing { animation: pulse 1.5s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { display: inline-block; animation: spin .8s linear infinite; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2zm6 0h6v6h-2V5.414l-5.293 5.293-1.414-1.414L12.586 4H8V2z"/></svg></div>
+    BASKET
+  </a>
+  <nav>
+    <a class="nav-link" href="/">Receipts</a>
+    <a class="nav-link" href="/history">History</a>
+    <a class="nav-link" href="/prices">Prices</a>
+    <a class="nav-link active" href="/meals">Meal Plan</a>
+    <a class="nav-link" href="/analytics">Insights</a>
+    <a class="nav-link" href="/household">Household</a>
+    <a class="nav-link" href="/spend-groups">Spend</a>
+  </nav>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── Panel 1: Recipe list + create/import ── -->
+  <div class="panel">
+    <div class="ph"><span class="pn">01</span> RECIPES</div>
+    <div class="pb" id="recipe-list-pb">
+      <div class="list-empty">No recipes yet.</div>
+    </div>
+
+    <div class="create-area">
+      <div class="create-tabs">
+        <button class="create-tab active" id="tab-new" onclick="switchCreateTab('new')">+ New</button>
+        <button class="create-tab" id="tab-url" onclick="switchCreateTab('url')">⬇ From URL</button>
+      </div>
+
+      <!-- New recipe form -->
+      <div class="create-body" id="create-new">
+        <input class="inp" id="nr-name" type="text" placeholder="Recipe name">
+        <div class="create-row">
+          <input class="inp srv-input" id="nr-servings" type="number" min="1" value="4" placeholder="Srv">
+          <button class="btn-primary" style="flex:1" onclick="createRecipe()">Add Recipe</button>
+        </div>
+      </div>
+
+      <!-- URL import form -->
+      <div class="create-body" id="create-url" style="display:none">
+        <input class="inp" id="url-input" type="url" placeholder="https://…">
+        <div class="create-row">
+          <button class="btn-primary" style="width:100%" id="url-btn" onclick="importFromUrl()">Import Recipe</button>
+        </div>
+        <div class="url-hint">
+          Works on AllRecipes, BBC Good Food, Woolworths Food,<br>Food Network, and most recipe sites.
+        </div>
+        <div id="url-error" style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--red);display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel 2: Recipe editor ── -->
+  <div class="panel" id="editor-panel">
+    <div class="ph">
+      <span class="pn">02</span>
+      <span id="editor-title">EDITOR</span>
+      <div class="ph-actions" id="editor-actions" style="display:none">
+        <button class="btn-ghost" onclick="openInPrices()">search prices ↗</button>
+        <button class="btn-ghost btn-danger" onclick="deleteCurrentRecipe()">delete</button>
+      </div>
+    </div>
+
+    <!-- View tabs (shown when a recipe is selected) -->
+    <div class="editor-tabs" id="editor-tabs" style="display:none">
+      <button class="editor-tab active" id="etab-ingredients" onclick="switchEditorTab('ingredients')">Ingredients</button>
+      <button class="editor-tab" id="etab-instructions" onclick="switchEditorTab('instructions')">Method</button>
+    </div>
+
+    <!-- Ingredients view -->
+    <div class="pb" id="editor-ingredients-pb">
+      <div class="editor-empty">Select a recipe from the left<br>to view and edit it.</div>
+    </div>
+
+    <!-- Instructions view (hidden by default) -->
+    <div class="pb" id="editor-instructions-pb" style="display:none">
+      <div class="instructions-section" id="instructions-section"></div>
+    </div>
+
+    <!-- Add ingredient bar (shown at bottom when on ingredients tab) -->
+    <div class="add-ing-bar" id="add-ing-bar">
+      <div class="add-ing-label">Add ingredient</div>
+      <div class="add-ing-row">
+        <input class="inp aif-name" id="aif-name" type="text" placeholder="e.g. chicken breast" autocomplete="off">
+        <input class="inp aif-qty"  id="aif-qty"  type="number" step="0.01" value="1">
+        <select class="inp aif-unit" id="aif-unit">
+          <option value="unit">unit</option>
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="l">L</option>
+          <option value="ml">ml</option>
+          <option value="cup">cup</option>
+          <option value="tbsp">tbsp</option>
+          <option value="tsp">tsp</option>
+        </select>
+        <button class="btn-primary" onclick="addIngredient()">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel 3: Shopping list ── -->
+  <div class="panel">
+    <div class="ph"><span class="pn">03</span> SHOPPING LIST</div>
+    <div class="pb" id="shopping-pb">
+      <div class="shopping-empty">
+        Check recipes using the ✓ boxes,<br>then click "Load prices".
+      </div>
+    </div>
+    <div class="store-totals" id="store-totals"></div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let recipes        = [];
+let activeId       = null;      // currently open recipe id
+let activeRecipe   = null;      // full recipe object
+let checkedIds     = new Set();
+let editorTab      = 'ingredients';
+let editingInstructions = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadRecipes();
+
+async function loadRecipes() {
+  recipes = await fetch('/meals/recipes').then(r => r.json());
+  renderList();
+}
+
+// ── Panel 1: Recipe list ──────────────────────────────────────────────────────
+function renderList() {
+  const pb = ge('recipe-list-pb');
+  if (!recipes.length) {
+    pb.innerHTML = '<div class="list-empty">No recipes yet.<br>Add one below or import a URL.</div>';
+    return;
+  }
+
+  let html = recipes.map(r => `
+    <div class="recipe-item ${r.id === activeId ? 'active' : ''}" onclick="selectRecipe(${r.id})">
+      <div class="ri-check ${checkedIds.has(r.id) ? 'checked' : ''}"
+           onclick="toggleCheck(event,${r.id})" title="Add to shopping list">
+        ${checkedIds.has(r.id) ? '✓' : ''}
+      </div>
+      <div class="ri-body">
+        <div class="ri-name">${esc(r.name)}</div>
+        <div class="ri-meta">
+          <span>${r.servings} srv</span>
+          <span>·</span>
+          <span>${r.ingredient_count} ing</span>
+          ${r.source_url ? `<span class="ri-src">·&nbsp;<a href="${esc(r.source_url)}" target="_blank" onclick="event.stopPropagation()">src ↗</a></span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+
+  if (checkedIds.size > 0) {
+    html += `<div style="padding:10px 14px">
+      <button class="load-btn" onclick="loadShoppingList()">
+        ⟳ Load prices for ${checkedIds.size} recipe${checkedIds.size > 1 ? 's' : ''}
+      </button></div>`;
+  }
+
+  pb.innerHTML = html;
+}
+
+// ── Create tab toggle ─────────────────────────────────────────────────────────
+function switchCreateTab(t) {
+  ge('tab-new').classList.toggle('active', t === 'new');
+  ge('tab-url').classList.toggle('active', t === 'url');
+  ge('create-new').style.display = t === 'new' ? '' : 'none';
+  ge('create-url').style.display = t === 'url' ? '' : 'none';
+}
+
+// ── Create recipe (manual) ────────────────────────────────────────────────────
+async function createRecipe() {
+  const name = ge('nr-name').value.trim();
+  if (!name) { ge('nr-name').focus(); return; }
+  const r = await fetch('/meals/recipes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, servings: parseInt(ge('nr-servings').value) || 4 }),
+  }).then(r => r.json());
+  ge('nr-name').value = '';
+  recipes.unshift(r);
+  renderList();
+  selectRecipe(r.id);
+}
+
+// ── Import from URL ───────────────────────────────────────────────────────────
+async function importFromUrl() {
+  const url = ge('url-input').value.trim();
+  if (!url) { ge('url-input').focus(); return; }
+  const btn = ge('url-btn');
+  const err = ge('url-error');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⟳</span> Fetching…';
+  err.style.display = 'none';
+
+  try {
+    const resp = await fetch('/meals/recipes/import-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || resp.statusText);
+    ge('url-input').value = '';
+    recipes.unshift(data);
+    renderList();
+    selectRecipe(data.id);
+    switchCreateTab('new');
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Import Recipe';
+  }
+}
+
+// ── Check / uncheck recipe ────────────────────────────────────────────────────
+function toggleCheck(e, id) {
+  e.stopPropagation();
+  if (checkedIds.has(id)) checkedIds.delete(id);
+  else checkedIds.add(id);
+  renderList();
+}
+
+// ── Select + load recipe ──────────────────────────────────────────────────────
+async function selectRecipe(id) {
+  activeId = id;
+  renderList();
+  activeRecipe = await fetch(`/meals/recipes/${id}`).then(r => r.json());
+  renderEditor();
+}
+
+// ── Delete recipe ─────────────────────────────────────────────────────────────
+async function deleteCurrentRecipe() {
+  if (!activeId || !confirm('Delete this recipe?')) return;
+  await fetch(`/meals/recipes/${activeId}`, { method: 'DELETE' });
+  checkedIds.delete(activeId);
+  activeId = null;
+  activeRecipe = null;
+  recipes = await fetch('/meals/recipes').then(r => r.json());
+  renderList();
+  clearEditor();
+}
+
+// ── Editor ────────────────────────────────────────────────────────────────────
+function renderEditor() {
+  if (!activeRecipe) { clearEditor(); return; }
+
+  ge('editor-title').textContent = activeRecipe.name.toUpperCase();
+  ge('editor-actions').style.display = '';
+  ge('editor-tabs').style.display = '';
+
+  if (editorTab === 'ingredients') renderIngredients();
+  else renderInstructions();
+}
+
+function clearEditor() {
+  ge('editor-title').textContent = 'EDITOR';
+  ge('editor-actions').style.display = 'none';
+  ge('editor-tabs').style.display = 'none';
+  ge('editor-ingredients-pb').innerHTML = '<div class="editor-empty">Select a recipe from the left<br>to view and edit it.</div>';
+  ge('editor-instructions-pb').style.display = 'none';
+  ge('editor-ingredients-pb').style.display = '';
+  ge('add-ing-bar').classList.remove('visible');
+  editingInstructions = false;
+}
+
+function switchEditorTab(tab) {
+  editorTab = tab;
+  ge('etab-ingredients').classList.toggle('active', tab === 'ingredients');
+  ge('etab-instructions').classList.toggle('active', tab === 'instructions');
+  ge('editor-ingredients-pb').style.display = tab === 'ingredients' ? '' : 'none';
+  ge('editor-instructions-pb').style.display = tab === 'instructions' ? '' : 'none';
+  ge('add-ing-bar').classList.toggle('visible', tab === 'ingredients' && !!activeRecipe);
+  if (tab === 'instructions') renderInstructions();
+}
+
+function renderIngredients() {
+  const pb = ge('editor-ingredients-pb');
+  pb.style.display = '';
+  ge('add-ing-bar').classList.add('visible');
+
+  const ings = activeRecipe.ingredients || [];
+  let html = '<div class="ingredients-section">';
+  html += `<div class="ing-section-hdr"><span>Ingredients (${ings.length})</span></div>`;
+
+  if (!ings.length) {
+    html += '<div class="no-ingredients">No ingredients yet.</div>';
+  }
+
+  for (const ing of ings) {
+    html += `
+      <div class="ing-row" id="ing-${ing.id}">
+        <span class="ing-name" title="${esc(ing.ingredient_name)}">${esc(ing.ingredient_name)}</span>
+        <span class="ing-qty">${ing.quantity > 0 ? ing.quantity : ''} ${esc(ing.unit)}</span>
+        <button class="ing-del" onclick="deleteIngredient(${ing.id})" title="Remove">×</button>
+      </div>`;
+  }
+
+  html += '</div>';
+  pb.innerHTML = html;
+}
+
+function renderInstructions() {
+  const pb = ge('editor-instructions-pb');
+  pb.style.display = '';
+  ge('add-ing-bar').classList.remove('visible');
+
+  const section = ge('instructions-section');
+  const src = activeRecipe.source_url;
+  const instr = activeRecipe.instructions || '';
+
+  let html = '';
+  if (src) {
+    html += `<div class="instructions-source"><a href="${esc(src)}" target="_blank">↗ View original recipe</a></div>`;
+  }
+
+  if (editingInstructions) {
+    html += `<textarea class="instructions-edit" id="instr-textarea">${esc(instr)}</textarea>
+      <div class="instructions-actions">
+        <button class="btn-primary" onclick="saveInstructions()">Save</button>
+        <button class="btn-ghost" onclick="cancelEditInstructions()">Cancel</button>
+      </div>`;
+  } else {
+    if (instr) {
+      html += `<div class="instructions-text">${esc(instr)}</div>
+        <div class="instructions-actions">
+          <button class="btn-ghost" onclick="startEditInstructions()">Edit method</button>
+        </div>`;
+    } else {
+      html += `<div class="instructions-empty">No method stored.</div>
+        <div class="instructions-actions">
+          <button class="btn-ghost" onclick="startEditInstructions()">Add method</button>
+        </div>`;
+    }
+  }
+
+  section.innerHTML = html;
+}
+
+function startEditInstructions() {
+  editingInstructions = true;
+  renderInstructions();
+  ge('instr-textarea')?.focus();
+}
+
+function cancelEditInstructions() {
+  editingInstructions = false;
+  renderInstructions();
+}
+
+async function saveInstructions() {
+  const text = ge('instr-textarea')?.value ?? '';
+  // Use PATCH-style update via POST create with same name — or just hit a minimal update
+  // We'll POST to an update endpoint; for now update in place and refresh
+  await fetch(`/meals/recipes/${activeId}/instructions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instructions: text }),
+  });
+  activeRecipe = await fetch(`/meals/recipes/${activeId}`).then(r => r.json());
+  const idx = recipes.findIndex(r => r.id === activeId);
+  if (idx >= 0) recipes[idx] = { ...recipes[idx] };
+  editingInstructions = false;
+  renderInstructions();
+}
+
+// ── Add / delete ingredient ───────────────────────────────────────────────────
+async function addIngredient() {
+  if (!activeId) return;
+  const name = ge('aif-name').value.trim();
+  if (!name) { ge('aif-name').focus(); return; }
+  const qty  = parseFloat(ge('aif-qty').value) || 1;
+  const unit = ge('aif-unit').value;
+
+  await fetch(`/meals/recipes/${activeId}/ingredients`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredient_name: name, quantity: qty, unit }),
+  });
+  ge('aif-name').value = '';
+  ge('aif-name').focus();
+  activeRecipe = await fetch(`/meals/recipes/${activeId}`).then(r => r.json());
+  const idx = recipes.findIndex(r => r.id === activeId);
+  if (idx >= 0) recipes[idx].ingredient_count = activeRecipe.ingredients.length;
+  renderList();
+  renderIngredients();
+}
+
+async function deleteIngredient(id) {
+  await fetch(`/meals/ingredients/${id}`, { method: 'DELETE' });
+  activeRecipe = await fetch(`/meals/recipes/${activeId}`).then(r => r.json());
+  const idx = recipes.findIndex(r => r.id === activeId);
+  if (idx >= 0) recipes[idx].ingredient_count = activeRecipe.ingredients.length;
+  renderList();
+  renderIngredients();
+}
+
+// ── "Search prices" shortcut ──────────────────────────────────────────────────
+function openInPrices() {
+  if (!activeRecipe?.ingredients?.length) return;
+  const first = activeRecipe.ingredients[0].ingredient_name;
+  window.open(`/prices?q=${encodeURIComponent(first)}`, '_blank');
+}
+
+// ── Shopping list ─────────────────────────────────────────────────────────────
+async function loadShoppingList() {
+  if (!checkedIds.size) return;
+  const pb = ge('shopping-pb');
+  const totals = ge('store-totals');
+  pb.innerHTML = '<div class="shopping-empty pulsing">Loading prices…</div>';
+  totals.style.display = 'none';
+
+  try {
+    const data = await fetch(`/meals/shopping?recipe_ids=${[...checkedIds].join(',')}`).then(r => r.json());
+    renderShoppingList(data);
+  } catch(e) {
+    pb.innerHTML = `<div class="shopping-empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderShoppingList(data) {
+  const pb     = ge('shopping-pb');
+  const totals = ge('store-totals');
+
+  let html = '';
+  for (const item of data.items || []) {
+    const c = item.cheapest;
+    html += `<div class="shopping-item">
+      <div class="si-name">${esc(item.ingredient)}</div>
+      <div class="si-qty">${item.quantity} ${esc(item.unit)} · ${esc(item.recipe_name)}</div>`;
+
+    if (c) {
+      const p = c.price_per_kg || c.price;
+      html += `<div class="si-cheapest">
+        <span class="store-dot store-${c.store}"></span>
+        <span class="si-best-store">${storeLabel(c.store)}</span>
+        <span class="si-best-product">${esc((c.name||'').slice(0,30))}</span>
+        <span class="si-best-price">${fmtPrice(p)}</span>
+      </div>`;
+      const others = Object.entries(item.prices_by_store).filter(([s]) => s !== c.store);
+      if (others.length) {
+        html += `<div class="si-others">`;
+        for (const [store, l] of others) {
+          html += `<span class="si-other-pill"><span class="store-dot store-${store}"></span>${storeLabel(store)} ${fmtPrice(l.price_per_kg || l.price)}</span>`;
+        }
+        html += `</div>`;
+      }
+    } else {
+      html += `<div class="si-no-price">No price data — <a href="/prices?q=${encodeURIComponent(item.ingredient)}">search prices →</a></div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  pb.innerHTML = html || '<div class="shopping-empty">No ingredients found.</div>';
+
+  const st = data.store_totals || {};
+  const entries = Object.entries(st);
+  if (entries.length) {
+    const min = Math.min(...entries.map(([,v]) => v));
+    let th = `<div class="st-hdr">Total cost (all from one store)</div>`;
+    for (const [store, total] of entries) {
+      const best = Math.abs(total - min) < 0.01;
+      th += `<div class="st-row">
+        <div class="st-name"><span class="store-dot store-${store}"></span>${storeLabel(store)}</div>
+        <div class="st-amount ${best ? 'st-best' : ''}">${fmtPrice(total)}${best ? ' ★' : ''}</div>
+      </div>`;
+    }
+    totals.innerHTML = th;
+    totals.style.display = '';
+  }
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement === ge('aif-name')) addIngredient();
+  if (e.key === 'Enter' && document.activeElement === ge('nr-name')) createRecipe();
+  if (e.key === 'Enter' && e.ctrlKey && document.activeElement === ge('url-input')) importFromUrl();
+});
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function ge(id) { return document.getElementById(id); }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtPrice(p) { return p != null ? 'R' + Number(p).toFixed(2) : '—'; }
+function storeLabel(s) {
+  return { checkers:'Checkers', woolworths:'Woolworths', pnp:'Pick n Pay', spar:'SPAR', uitkyk:'Uitkyk' }[s] || s;
+}
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

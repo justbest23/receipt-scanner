@@ -1,0 +1,36 @@
+{
+  "name": "Mr Price",
+  "aliases": [
+    "mr price", "mrp", "mr price group", "mrp group",
+    "mr price sport", "mr price home", "mrphome", "mrpsport"
+  ],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "clothing_and_homeware",
+  "vat_indicator": {
+    "type": "unknown",
+    "description": "PLACEHOLDER — needs a real Mr Price receipt to document VAT marking convention. All items likely VAT applicable as clothing/homeware."
+  },
+  "quantity_rules": {
+    "description": "PLACEHOLDER — needs a real Mr Price receipt to document quantity patterns."
+  },
+  "product_name_rules": {
+    "description": "PLACEHOLDER — Mr Price sells clothing, sport, and homeware. Product codes may appear."
+  },
+  "weight_rules": {
+    "description": "Not applicable — clothing and homeware store."
+  },
+  "discount_rules": {
+    "description": "PLACEHOLDER — needs a real Mr Price receipt to document discount/sale line format."
+  },
+  "store_name_rules": {
+    "description": "Normalise to the specific division if clear (Mr Price, Mr Price Sport, Mr Price Home), otherwise 'Mr Price'.",
+    "always_output": "Mr Price"
+  },
+  "prompt_notes": [
+    "PLACEHOLDER — this vendor profile is incomplete. Extraction will use generic rules.",
+    "This is a clothing and homeware retailer, not a grocery store. All items are VAT applicable.",
+    "Category options for this store: clothing | footwear | accessories | homeware | sport | other"
+  ]
+}

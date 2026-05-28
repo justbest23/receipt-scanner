@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Compare</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #363a40;
+      --text:       #e2e4e7;
+      --text-dim:   #6b7280;
+      --text-muted: #3f444c;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --green-dim:  #14532d;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --teal:       #2dd4bf;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+
+      /* store brand colours */
+      --checkers:   #e31837;
+      --woolworths: #008000;
+      --pnp:        #e31837;
+      --spar:       #007a3d;
+      --uitkyk:     #c9a84c;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    /* ── Nav ── */
+    header {
+      display: flex; align-items: center; gap: 0;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+      height: 52px; flex-shrink: 0; padding: 0 24px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; margin-right: 28px; text-decoration: none; color: var(--text); }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    nav { display: flex; gap: 2px; }
+    .nav-link {
+      padding: 6px 16px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; text-decoration: none; color: var(--text-dim);
+      border-radius: 2px; transition: color .2s, background .2s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .nav-link.active { color: var(--accent); background: rgba(249,115,22,.08); }
+    #scrape-status { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .spin { display: inline-block; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Search bar ── */
+    .search-section { padding: 32px 24px 20px; max-width: 800px; margin: 0 auto; }
+    .search-wrap { position: relative; }
+    #search-input {
+      width: 100%; padding: 14px 54px 14px 20px; background: var(--surface);
+      border: 1.5px solid var(--border2); color: var(--text); font-family: var(--sans);
+      font-size: 16px; border-radius: 4px; outline: none; transition: border-color .2s;
+    }
+    #search-input:focus { border-color: var(--accent); }
+    #search-input::placeholder { color: var(--text-muted); }
+    #search-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: var(--accent); border: none; color: #000; cursor: pointer;
+      width: 34px; height: 34px; border-radius: 2px; font-size: 16px;
+      display: grid; place-items: center; transition: opacity .2s;
+    }
+    #search-btn:hover { opacity: .85; }
+    .search-hint { margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+
+    /* ── Store filter pills ── */
+    .filters { padding: 0 24px 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .filter-label { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; }
+    .store-pill {
+      padding: 4px 12px; border-radius: 20px; font-family: var(--mono); font-size: 10px;
+      letter-spacing: .05em; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border2);
+      background: transparent; color: var(--text-dim); transition: all .15s;
+    }
+    .store-pill:hover { border-color: var(--border2); color: var(--text); }
+    .store-pill.active { color: #000; border-color: transparent; }
+    .store-pill[data-store="all"].active      { background: var(--accent); }
+    .store-pill[data-store="checkers"].active { background: var(--checkers); }
+    .store-pill[data-store="woolworths"].active { background: var(--woolworths); }
+    .store-pill[data-store="pnp"].active      { background: var(--pnp); }
+    .store-pill[data-store="spar"].active     { background: var(--spar); }
+    .store-pill[data-store="uitkyk"].active   { background: var(--uitkyk); }
+
+    /* ── Upload Uitkyk CSV ── */
+    .uitkyk-section { padding: 0 24px 20px; }
+    .uitkyk-row { display: flex; align-items: center; gap: 10px; }
+    #uitkyk-file { display: none; }
+    .uitkyk-btn {
+      padding: 6px 14px; background: transparent; border: 1px solid var(--border2);
+      color: var(--text-muted); font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
+      cursor: pointer; border-radius: 2px; transition: all .15s;
+    }
+    .uitkyk-btn:hover { border-color: var(--uitkyk); color: var(--uitkyk); }
+    .uitkyk-msg { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+
+    /* ── Results ── */
+    .results-section { padding: 0 24px 40px; }
+    .results-meta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-bottom: 14px; }
+
+    /* Comparison table */
+    .compare-table { width: 100%; border-collapse: collapse; }
+    .compare-table th {
+      text-align: left; padding: 8px 12px; font-family: var(--mono); font-size: 9px;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted);
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    .compare-table th.sortable { cursor: pointer; }
+    .compare-table th.sortable:hover { color: var(--text); }
+    .compare-table th.sorted { color: var(--accent); }
+    .compare-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+      font-size: 13px; vertical-align: middle;
+    }
+    .compare-table tr:hover td { background: var(--surface2); }
+    .compare-table tr.cheapest td { background: rgba(34,197,94,.04); }
+    .compare-table tr.cheapest td:first-child { border-left: 2px solid var(--green); }
+
+    .store-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      margin-right: 6px; vertical-align: middle; flex-shrink: 0;
+    }
+    .store-checkers   { background: var(--checkers); }
+    .store-woolworths { background: var(--woolworths); }
+    .store-pnp        { background: var(--pnp); }
+    .store-spar       { background: var(--spar); }
+    .store-uitkyk     { background: var(--uitkyk); }
+
+    .price-cell { font-family: var(--mono); font-weight: 700; }
+    .price-cell.best { color: var(--green); }
+    .per-kg-cell { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+    .unit-cell { font-size: 11px; color: var(--text-muted); }
+    .stale-badge {
+      display: inline-block; padding: 1px 5px; border-radius: 2px;
+      background: rgba(234,179,8,.1); color: var(--yellow);
+      border: 1px solid rgba(234,179,8,.2); font-family: var(--mono); font-size: 9px;
+    }
+    .fresh-badge {
+      display: inline-block; padding: 1px 5px; border-radius: 2px;
+      background: rgba(34,197,94,.08); color: var(--green);
+      border: 1px solid rgba(34,197,94,.15); font-family: var(--mono); font-size: 9px;
+    }
+    .cheapest-badge {
+      display: inline-block; padding: 1px 5px; border-radius: 2px;
+      background: rgba(34,197,94,.12); color: var(--green);
+      border: 1px solid rgba(34,197,94,.3); font-family: var(--mono); font-size: 9px;
+      margin-left: 6px;
+    }
+
+    .name-cell a { color: var(--text); text-decoration: none; }
+    .name-cell a:hover { color: var(--accent); text-decoration: underline; }
+
+    /* Store summary cards */
+    .store-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .store-card {
+      flex: 1; min-width: 140px; max-width: 200px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      padding: 12px 14px;
+    }
+    .store-card.cheapest-store { border-color: var(--green); }
+    .store-card-name { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .store-card-price { font-size: 20px; font-weight: 600; font-family: var(--mono); }
+    .store-card-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    .empty-state { padding: 60px 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 2; }
+    .empty-icon  { font-size: 32px; margin-bottom: 12px; }
+
+    .section-divider { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); padding: 6px 0 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .pulsing { animation: pulse 1.5s infinite; }
+
+    /* ── Scrape panel ── */
+    .scrape-section {
+      padding: 0 24px 18px; border-bottom: 1px solid var(--border); margin-bottom: 0;
+    }
+    .scrape-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .scrape-label {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .08em; flex-shrink: 0;
+    }
+    .scrape-query-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--sans); font-size: 13px; padding: 5px 10px; border-radius: 2px;
+      transition: border-color .15s; min-width: 0;
+    }
+    .scrape-query-input:focus { outline: none; border-color: var(--accent); }
+    .scrape-query-input::placeholder { color: var(--text-muted); }
+    .btn-scrape-all {
+      padding: 5px 14px; background: transparent; color: var(--accent);
+      border: 1px solid var(--accent-dim); font-family: var(--mono); font-size: 10px;
+      letter-spacing: .06em; cursor: pointer; border-radius: 2px; flex-shrink: 0;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-scrape-all:hover:not(:disabled) { background: rgba(249,115,22,.1); border-color: var(--accent); }
+    .btn-scrape-all:disabled { opacity: .35; cursor: not-allowed; }
+
+    .scrape-overall { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 0 2px; }
+    .scrape-overall-label {
+      font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+      flex-shrink: 0; min-width: 80px; text-align: right;
+    }
+
+    .scrape-rows { display: flex; flex-direction: column; gap: 7px; }
+    .scrape-row { display: flex; align-items: center; gap: 8px; }
+    .scrape-store-name {
+      width: 96px; flex-shrink: 0; font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    }
+
+    /* bar */
+    .scrape-bar-track {
+      flex: 1; height: 5px; background: var(--surface3); border-radius: 3px;
+      overflow: hidden; position: relative;
+    }
+    .scrape-bar-fill { height: 100%; border-radius: 3px; transition: width .35s ease; }
+    .scrape-bar-fill.green { background: var(--green); }
+    .scrape-bar-fill.red   { background: var(--red); }
+    .scrape-bar-fill.idle  { background: var(--surface3); }
+
+    /* indeterminate slide */
+    @keyframes scrape-slide { 0%{ left:-45%;} 100%{ left:145%;} }
+    .scrape-bar-track.running::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 45%;
+      background: var(--accent); border-radius: 3px;
+      animation: scrape-slide 1.1s ease-in-out infinite;
+    }
+
+    .scrape-row-status {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      min-width: 190px; flex-shrink: 0; text-align: right;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .scrape-row-status.ok  { color: var(--green); }
+    .scrape-row-status.err { color: var(--red); }
+    .scrape-row-status.run { color: var(--yellow); }
+
+    .btn-scrape-one {
+      width: 26px; height: 22px; background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 13px; cursor: pointer; border-radius: 2px;
+      display: grid; place-items: center; flex-shrink: 0; transition: border-color .15s, color .15s;
+    }
+    .btn-scrape-one:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-scrape-one:disabled { opacity: .3; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2zm6 0h6v6h-2V5.414l-5.293 5.293-1.414-1.414L12.586 4H8V2z"/></svg></div>
+    BASKET
+  </a>
+  <nav>
+    <a class="nav-link" href="/">Receipts</a>
+    <a class="nav-link" href="/history">History</a>
+    <a class="nav-link active" href="/prices">Prices</a>
+    <a class="nav-link" href="/meals">Meal Plan</a>
+    <a class="nav-link" href="/analytics">Insights</a>
+    <a class="nav-link" href="/household">Household</a>
+    <a class="nav-link" href="/spend-groups">Spend</a>
+  </nav>
+  <div id="scrape-status"></div>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+</header>
+
+<div class="search-section">
+  <div class="search-wrap">
+    <input id="search-input" type="text" placeholder="Search for a product, e.g. chicken breast, mince, oats…" autocomplete="off">
+    <button id="search-btn" onclick="doSearch()">↵</button>
+  </div>
+  <div class="search-hint">Results are cached for 12 hours. Stale results trigger a background refresh.</div>
+</div>
+
+<div class="scrape-section">
+  <div class="scrape-header">
+    <span class="scrape-label">Scrape</span>
+    <input id="scrape-query-input" class="scrape-query-input" type="text"
+      placeholder="product to scrape, e.g. milk, bread…" autocomplete="off">
+    <button class="btn-scrape-all" id="btn-scrape-all" onclick="scrapeAll()">↻ Scrape All</button>
+  </div>
+  <div class="scrape-overall">
+    <div class="scrape-bar-track" id="overall-track">
+      <div class="scrape-bar-fill" id="overall-fill" style="width:0%"></div>
+    </div>
+    <span class="scrape-overall-label" id="overall-label">0 / 4 stores</span>
+  </div>
+  <div class="scrape-rows" id="scrape-rows"></div>
+</div>
+
+<div class="filters">
+  <span class="filter-label">Store:</span>
+  <button class="store-pill active" data-store="all" onclick="setFilter('all', this)">All</button>
+  <button class="store-pill" data-store="checkers"   onclick="setFilter('checkers', this)">Checkers</button>
+  <button class="store-pill" data-store="woolworths" onclick="setFilter('woolworths', this)">Woolworths</button>
+  <button class="store-pill" data-store="pnp"        onclick="setFilter('pnp', this)">Pick n Pay</button>
+  <button class="store-pill" data-store="spar"       onclick="setFilter('spar', this)">SPAR</button>
+  <button class="store-pill" data-store="uitkyk"     onclick="setFilter('uitkyk', this)">Uitkyk</button>
+</div>
+
+<div class="uitkyk-section">
+  <div class="uitkyk-row">
+    <button class="uitkyk-btn" onclick="document.getElementById('uitkyk-file').click()">⬆ Import Uitkyk CSV</button>
+    <input type="file" id="uitkyk-file" accept=".csv" onchange="importUitkyk(this)">
+    <span class="uitkyk-msg" id="uitkyk-msg"></span>
+  </div>
+</div>
+
+<div class="results-section">
+  <div id="results-container">
+    <div class="empty-state">
+      <div class="empty-icon">🛒</div>
+      Search for a product above to compare prices across stores.
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Scrape state ───────────────────────────────────────────────────────────────
+const ONLINE_STORES  = ['checkers', 'woolworths', 'pnp', 'spar'];
+const STORE_LABELS   = { checkers:'Checkers', woolworths:'Woolworths', pnp:'Pick n Pay', spar:'SPAR' };
+
+function freshStates() {
+  return Object.fromEntries(ONLINE_STORES.map(s => [s, { status:'idle', count:0, lastAt:null, err:null }]));
+}
+let storeStates = freshStates();
+
+function scrapeQuery() {
+  return document.getElementById('scrape-query-input').value.trim();
+}
+
+function initStoreStatesFromResults(results, forQuery) {
+  storeStates = freshStates();
+  for (const store of ONLINE_STORES) {
+    const rows = results.filter(r => r.store === store);
+    if (!rows.length) continue;
+    const latest = rows.reduce((a, b) => new Date(a.scraped_at) > new Date(b.scraped_at) ? a : b);
+    storeStates[store] = { status:'done', count:rows.length, lastAt:latest.scraped_at, err:null };
+  }
+  // sync the scrape input to match the search that was just run
+  if (forQuery) document.getElementById('scrape-query-input').value = forQuery;
+  renderScrapePanel();
+}
+
+async function scrapeStore(store) {
+  const q = scrapeQuery();
+  if (!q) return;
+  storeStates[store] = { status:'running', count:0, lastAt:null, err:null };
+  renderScrapePanel();
+  try {
+    const r = await fetch('/prices/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q, store }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+    storeStates[store] = { status:'done', count:d.count, lastAt:new Date().toISOString(), err:null };
+    // if this matches the current main search, merge results into the table
+    if (q === currentQuery) {
+      allResults = allResults.filter(x => x.store !== store).concat(d.results || []);
+      renderResults();
+    }
+  } catch(e) {
+    storeStates[store] = { status:'error', count:0, lastAt:null, err:e.message };
+  }
+  renderScrapePanel();
+}
+
+async function scrapeAll() {
+  const q = scrapeQuery();
+  if (!q) return;
+  storeStates = freshStates();
+  renderScrapePanel();
+  await Promise.all(ONLINE_STORES.map(s => scrapeStore(s)));
+}
+
+function renderScrapePanel() {
+  const q          = scrapeQuery();
+  const anyRunning = ONLINE_STORES.some(s => storeStates[s]?.status === 'running');
+  const doneCount  = ONLINE_STORES.filter(s => storeStates[s]?.status === 'done').length;
+
+  const allBtn = document.getElementById('btn-scrape-all');
+  allBtn.disabled    = !q || anyRunning;
+  allBtn.textContent = anyRunning ? '↻ scraping…' : '↻ Scrape All';
+
+  // overall bar
+  const pct = ONLINE_STORES.length ? (doneCount / ONLINE_STORES.length) * 100 : 0;
+  const fill = document.getElementById('overall-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'scrape-bar-fill' + (doneCount === ONLINE_STORES.length && doneCount > 0 ? ' green' : '');
+  document.getElementById('overall-label').textContent = `${doneCount} / ${ONLINE_STORES.length} stores`;
+
+  // per-store rows
+  document.getElementById('scrape-rows').innerHTML = ONLINE_STORES.map(store => {
+    const st      = storeStates[store] || { status:'idle' };
+    const running = st.status === 'running';
+    const done    = st.status === 'done';
+    const err     = st.status === 'error';
+
+    const barCls  = done ? 'green' : err ? 'red' : 'idle';
+    const barPct  = (done || err) ? 100 : 0;
+    const statuCls = done ? 'ok' : err ? 'err' : running ? 'run' : '';
+    const statusTxt = running ? 'scraping…'
+                    : done    ? `${st.count} result${st.count!==1?'s':''} · ${ageText(st.lastAt)}`
+                    : err     ? (st.err || 'error')
+                    : 'idle';
+
+    return `
+      <div class="scrape-row">
+        <span class="store-dot store-${store}"></span>
+        <span class="scrape-store-name">${STORE_LABELS[store]}</span>
+        <div class="scrape-bar-track ${running?'running':''}">
+          ${!running ? `<div class="scrape-bar-fill ${barCls}" style="width:${barPct}%"></div>` : ''}
+        </div>
+        <span class="scrape-row-status ${statuCls}">${esc(statusTxt)}</span>
+        <button class="btn-scrape-one" title="Scrape ${STORE_LABELS[store]}"
+          onclick="scrapeStore('${store}')" ${!q||running?'disabled':''}>↻</button>
+      </div>`;
+  }).join('');
+}
+
+function ageText(ts) {
+  if (!ts) return '';
+  const m = Math.round((Date.now() - new Date(ts)) / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  return `${Math.round(m/60)}h ago`;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let allResults   = [];
+let activeFilter = 'all';
+let sortKey      = 'price';
+let sortAsc      = true;
+let pollTimer    = null;
+let currentQuery = '';
+
+// wire Enter on the scrape query input
+document.getElementById('scrape-query-input')
+  .addEventListener('keydown', e => { if (e.key === 'Enter') scrapeAll(); });
+
+// also re-render buttons live as the user types into the scrape input
+document.getElementById('scrape-query-input')
+  .addEventListener('input', renderScrapePanel);
+
+// init panel on load (must be after currentQuery is declared)
+renderScrapePanel();
+
+// ── Search ─────────────────────────────────────────────────────────────────────
+const input = document.getElementById('search-input');
+input.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+async function doSearch() {
+  const q = input.value.trim();
+  if (!q || q.length < 2) return;
+  if (q !== currentQuery) {
+    currentQuery = q;
+  }
+  clearPoll();
+  showStatus('searching…', true);
+
+  try {
+    const data = await fetch(`/prices/search?q=${encodeURIComponent(q)}`).then(r => r.json());
+    allResults = data.results || [];
+    renderResults();
+    initStoreStatesFromResults(allResults, q);
+    if (data.scraping) {
+      showStatus('scraping stores…', true);
+      startPoll(q);
+    } else {
+      showStatus(`${allResults.length} results`, false);
+    }
+  } catch(e) {
+    showStatus('error: ' + e.message, false);
+  }
+}
+
+async function pollResults(q) {
+  try {
+    const data = await fetch(`/prices/search?q=${encodeURIComponent(q)}`).then(r => r.json());
+    allResults = data.results || [];
+    renderResults();
+    if (data.fresh) {
+      clearPoll();
+      showStatus(`${allResults.length} results`, false);
+    }
+  } catch(_) {}
+}
+
+function startPoll(q) {
+  clearPoll();
+  pollTimer = setInterval(() => pollResults(q), 5000);
+}
+
+function clearPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+function showStatus(msg, spinning) {
+  const el = document.getElementById('scrape-status');
+  el.innerHTML = spinning
+    ? `<span class="spin">⟳</span> ${esc(msg)}`
+    : `<span style="color:var(--green)">✓</span> ${esc(msg)}`;
+}
+
+// ── Filter ─────────────────────────────────────────────────────────────────────
+function setFilter(store, btn) {
+  activeFilter = store;
+  document.querySelectorAll('.store-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderResults();
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────────
+function setSort(key) {
+  if (sortKey === key) { sortAsc = !sortAsc; }
+  else { sortKey = key; sortAsc = true; }
+  document.querySelectorAll('.compare-table th.sortable').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.sort === key);
+  });
+  renderResults();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderResults() {
+  const container = document.getElementById('results-container');
+  let filtered = activeFilter === 'all'
+    ? [...allResults]
+    : allResults.filter(r => r.store === activeFilter);
+
+  if (!filtered.length) {
+    if (allResults.length) {
+      container.innerHTML = `<div class="empty-state">No results for store filter <strong>${activeFilter}</strong>.</div>`;
+    } else {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>No results yet. Scrape in progress…</div>`;
+    }
+    return;
+  }
+
+  // Sort
+  filtered.sort((a, b) => {
+    let av = sortKey === 'price' ? (a.price_per_kg || a.price || Infinity)
+           : sortKey === 'name'  ? (a.name || '').toLowerCase()
+           : sortKey === 'store' ? a.store : Infinity;
+    let bv = sortKey === 'price' ? (b.price_per_kg || b.price || Infinity)
+           : sortKey === 'name'  ? (b.name || '').toLowerCase()
+           : sortKey === 'store' ? b.store : Infinity;
+    return sortAsc ? (av < bv ? -1 : av > bv ? 1 : 0) : (av > bv ? -1 : av < bv ? 1 : 0);
+  });
+
+  // Find global cheapest price (per kg if available, else per unit)
+  const prices = filtered.map(r => r.price_per_kg || r.price).filter(p => p != null);
+  const minPrice = prices.length ? Math.min(...prices) : null;
+
+  // Best price per store (for summary cards)
+  const bestByStore = {};
+  for (const r of allResults) {
+    const p = r.price_per_kg || r.price;
+    if (p == null) continue;
+    if (!bestByStore[r.store] || p < (bestByStore[r.store].price_per_kg || bestByStore[r.store].price)) {
+      bestByStore[r.store] = r;
+    }
+  }
+  const storeList = Object.values(bestByStore).sort((a,b) =>
+    (a.price_per_kg||a.price||999) - (b.price_per_kg||b.price||999));
+  const cheapestStore = storeList[0]?.store;
+
+  let html = '';
+
+  // Store summary cards (only if showing all stores)
+  if (activeFilter === 'all' && storeList.length > 1) {
+    html += `<div class="section-divider">Best price per store</div>`;
+    html += `<div class="store-cards">`;
+    for (const r of storeList) {
+      const p = r.price_per_kg || r.price;
+      const label = r.price_per_kg ? '/kg' : (r.unit || '/unit');
+      html += `
+        <div class="store-card ${r.store === cheapestStore ? 'cheapest-store' : ''}">
+          <div class="store-card-name">
+            <span class="store-dot store-${r.store}"></span>
+            ${storeLabel(r.store)}
+            ${r.store === cheapestStore ? '<span class="cheapest-badge">cheapest</span>' : ''}
+          </div>
+          <div class="store-card-price">${fmtPrice(p)}</div>
+          <div class="store-card-label">${esc(label)}</div>
+          <div class="store-card-label" style="margin-top:4px;font-size:10px">${esc(r.name.slice(0,40))}</div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+
+  // Full results table
+  html += `<div class="section-divider">All results (${filtered.length})</div>`;
+  html += `
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th class="sortable ${sortKey==='store'?'sorted':''}" data-sort="store" onclick="setSort('store')">Store${sortArrow('store')}</th>
+          <th class="sortable ${sortKey==='name'?'sorted':''}" data-sort="name" onclick="setSort('name')">Product${sortArrow('name')}</th>
+          <th class="sortable ${sortKey==='price'?'sorted':''}" data-sort="price" onclick="setSort('price')">Price${sortArrow('price')}</th>
+          <th>Per kg</th>
+          <th>Unit</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  for (const r of filtered) {
+    const p = r.price_per_kg || r.price;
+    const isCheapest = minPrice != null && p != null && Math.abs(p - minPrice) < 0.01;
+    html += `
+      <tr class="${isCheapest ? 'cheapest' : ''}">
+        <td><span class="store-dot store-${r.store}"></span>${storeLabel(r.store)}</td>
+        <td class="name-cell">${r.url ? `<a href="${esc(r.url)}" target="_blank">${esc(r.name)}</a>` : esc(r.name)}${isCheapest ? '<span class="cheapest-badge">cheapest</span>' : ''}</td>
+        <td class="price-cell ${isCheapest?'best':''}">${fmtPrice(r.price)}</td>
+        <td class="per-kg-cell">${r.price_per_kg ? fmtPrice(r.price_per_kg)+'/kg' : '—'}</td>
+        <td class="unit-cell">${esc(r.unit||'—')}</td>
+        <td>${ageTag(r.scraped_at)}</td>
+      </tr>`;
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ── Uitkyk CSV import ──────────────────────────────────────────────────────────
+async function importUitkyk(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const msg = document.getElementById('uitkyk-msg');
+  msg.textContent = 'Importing…';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const d = await fetch('/prices/uitkyk/import', { method: 'POST', body: fd }).then(r => r.json());
+    msg.textContent = `✓ Imported ${d.imported} items from Uitkyk`;
+    if (currentQuery) doSearch();
+  } catch(e) {
+    msg.textContent = 'Error: ' + e.message;
+  }
+  input.value = '';
+}
+
+// ── Util ───────────────────────────────────────────────────────────────────────
+function esc(s)  { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtPrice(p) { return p != null ? 'R' + Number(p).toFixed(2) : '—'; }
+
+function storeLabel(s) {
+  return {checkers:'Checkers',woolworths:'Woolworths',pnp:'Pick n Pay',spar:'SPAR',uitkyk:'Uitkyk'}[s] || s;
+}
+
+function ageTag(ts) {
+  if (!ts) return '—';
+  const mins = Math.round((Date.now() - new Date(ts)) / 60000);
+  if (mins < 60) return `<span class="fresh-badge">${mins}m ago</span>`;
+  if (mins < 720) return `<span class="fresh-badge">${Math.round(mins/60)}h ago</span>`;
+  return `<span class="stale-badge">${Math.round(mins/60)}h ago</span>`;
+}
+
+function sortArrow(key) {
+  if (sortKey !== key) return '';
+  return ` ${sortAsc ? '↑' : '↓'}`;
+}
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

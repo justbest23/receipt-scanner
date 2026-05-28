@@ -1,0 +1,34 @@
+{
+  "name": "Pick n Pay",
+  "aliases": [
+    "pick n pay", "pick and pay", "pnp", "pick n pay pty",
+    "pick n pay (pty) ltd", "pick n pay stores"
+  ],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "grocery",
+  "vat_indicator": {
+    "type": "unknown",
+    "description": "PLACEHOLDER — needs a real Pick n Pay receipt to document VAT marking convention."
+  },
+  "quantity_rules": {
+    "description": "PLACEHOLDER — needs a real Pick n Pay receipt to document quantity patterns."
+  },
+  "product_name_rules": {
+    "description": "PLACEHOLDER — needs a real Pick n Pay receipt to document naming conventions."
+  },
+  "weight_rules": {
+    "description": "PLACEHOLDER — needs a real Pick n Pay receipt to document weight handling."
+  },
+  "discount_rules": {
+    "description": "PLACEHOLDER — needs a real Pick n Pay receipt to document discount line format. Smart Shopper discounts may appear as separate lines."
+  },
+  "store_name_rules": {
+    "description": "Always output 'Pick n Pay'.",
+    "always_output": "Pick n Pay"
+  },
+  "prompt_notes": [
+    "PLACEHOLDER — this vendor profile is incomplete. Extraction will use generic rules."
+  ]
+}

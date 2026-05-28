@@ -1,0 +1,76 @@
+{
+  "name": "Checkers",
+  "aliases": [
+    "checkers", "checkers hyper", "checkers food", "checkers liquorshop",
+    "shoprite checkers", "shoprite checkers pty", "shoprite checkers (pty) ltd"
+  ],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "grocery",
+  "vat_indicator": {
+    "type": "price_suffix",
+    "zero_rated_marker": "A",
+    "description": "Prices printed as R34.99A mean zero-rated (0% VAT). Prices with no suffix mean 15% VAT applies."
+  },
+  "quantity_rules": {
+    "description": "Quantity is ALWAYS 1 unless the receipt explicitly shows 'n @' before the price.",
+    "multi_unit_pattern": "n @ Rxx.xx — e.g. '2 @ R1.40' means quantity 2, unit price R1.40",
+    "examples": [
+      "CHECKOUT BAG CH  2 @ R1.40  R2.80  →  quantity=2, unit_price=1.40, total_price=2.80",
+      "TOM PST 115G (V)  4 @ R14.99  R59.96  →  quantity=4, unit_price=14.99, total_price=59.96",
+      "GINGER KG (V)  R25.48A  →  quantity=1 (no @ present)"
+    ]
+  },
+  "product_name_rules": {
+    "description": "Numbers and codes in product names are descriptors, NOT quantities.",
+    "patterns": [
+      "1S = single unit of that product type (e.g. AVO BAG 1S = one bag of avos)",
+      "2S = two-pack",
+      "1.5 = weight in kg (e.g. APL ROYL GALA 1.5 = 1.5kg bag of Royal Gala apples)",
+      "2KG = 2 kilogram bag — this is the pack size, not the quantity",
+      "500G = 500 gram pack",
+      "115G = 115 gram pack",
+      "(V) = variable weight item, priced by weight at till"
+    ]
+  },
+  "weight_rules": {
+    "description": "For variable weight items, extract weight_kg if determinable from product name.",
+    "examples": [
+      "APL ROYL GALA 1.5 (V)  R34.99A  →  weight_kg=1.5, per_kg_price=34.99/1.5=23.33",
+      "ORANGE 2KG (V)  R34.99A  →  weight_kg=2.0, per_kg_price=34.99/2=17.50",
+      "LEMON 1.5KG (V)  R29.99A  →  weight_kg=1.5, per_kg_price=29.99/1.5=19.99",
+      "CARROT MED 500G (V)  R9.99A  →  weight_kg=0.5, per_kg_price=9.99/0.5=19.98",
+      "GINGER KG (V)  R25.48A  →  weight_kg=null (actual weight not on receipt), per_kg_price=null",
+      "BANANA BULK 1S (V)  R39.99A  →  weight_kg=null (1S is unit code not weight)"
+    ]
+  },
+  "discount_rules": {
+    "description": "Discounts appear as negative price lines, often branded as XTRASAVE or similar.",
+    "examples": [
+      "XTRASAVE HBD OATS  -R7.00  →  include as item, total_price=-7.00, category=discount",
+      "XTRASAVE FRESH MILK  -R5.00  →  include as item, total_price=-5.00, category=discount"
+    ]
+  },
+  "store_name_rules": {
+    "description": "Always normalise store name to 'Checkers' regardless of what appears on receipt.",
+    "receipt_may_show": [
+      "Checkers",
+      "SHOPRITE CHECKERS (PTY) LTD",
+      "CHECKERS HYPER",
+      "CHECKERS FOOD"
+    ],
+    "always_output": "Checkers"
+  },
+  "item_count_rules": {
+    "description": "The receipt prints TOTAL [n] where n is the exact number of line items. Count must match.",
+    "example": "TOTAL [21] means 21 line items including discounts and bag charges"
+  },
+  "prompt_notes": [
+    "The RATE/TAX/GROSS/NET table at the bottom is ground truth for VAT. Use the TAX value from the 15% row as vat_total.",
+    "A = zero-rated on the price suffix is more reliable than guessing from product category.",
+    "Hot food counter items (e.g. SP VEG = Special Vegetable Soup) are 15% VAT — they are prepared foods.",
+    "Checkout bags are taxable at 15%.",
+    "Shoprite is a different store. Checkers and Shoprite are sister brands but separate stores."
+  ]
+}

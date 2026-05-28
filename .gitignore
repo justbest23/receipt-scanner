@@ -1,0 +1,24 @@
+# Real credentials — never commit
+.env
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Uploaded receipt images
+backend/uploads/
+
+# Editor cruft
+*.swp
+*.swo
+
+# Claude Code session data
+.claude/
+
+# Large binaries / test data
+*.tar.gz
+*.jpeg
+*.jpg
+*.png
+*.csv

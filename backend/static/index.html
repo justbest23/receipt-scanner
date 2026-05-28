@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0f11;
+      --surface:    #141618;
+      --surface2:   #1c1f22;
+      --surface3:   #22262b;
+      --border:     #2a2d32;
+      --border2:    #363a40;
+      --text:       #e2e4e7;
+      --text-dim:   #6b7280;
+      --text-muted: #3f444c;
+      --accent:     #f97316;
+      --accent-dim: #7c3a10;
+      --green:      #22c55e;
+      --yellow:     #eab308;
+      --red:        #ef4444;
+      --purple:     #a78bfa;
+      --purple-dim: #3b2a6e;
+      --teal:       #2dd4bf;
+      --teal-dim:   #134e4a;
+      --mono:       'Space Mono', monospace;
+      --sans:       'DM Sans', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+      height: 52px; flex-shrink: 0;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    .logo-name { color: var(--text); }
+    .logo-ver  { color: var(--text-muted); }
+    #health-bar { display: flex; gap: 14px; font-family: var(--mono); font-size: 11px; }
+    .hp { display: flex; align-items: center; gap: 5px; color: var(--text-dim); }
+    .hd { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+    .hd.ok   { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .hd.err  { background: var(--red);   box-shadow: 0 0 5px var(--red); }
+    .hd.warn { background: var(--yellow); }
+
+    /* ── Layout ── */
+    .workspace { display: grid; grid-template-columns: 300px 1fr 1fr; height: calc(100vh - 52px); }
+    .panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel:last-child { border-right: none; }
+    .ph {
+      padding: 9px 16px; border-bottom: 1px solid var(--border); background: var(--surface);
+      display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px;
+      letter-spacing: 0.07em; color: var(--text-dim); text-transform: uppercase; flex-shrink: 0;
+    }
+    .pn { font-size: 9px; color: var(--accent); border: 1px solid var(--accent-dim); padding: 1px 4px; }
+    .pb { flex: 1; overflow-y: auto; }
+    .pb::-webkit-scrollbar { width: 3px; }
+    .pb::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    /* ── Panel 1 ── */
+    #upload-zone {
+      margin: 18px; border: 1.5px dashed var(--border2); border-radius: 3px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 26px 14px; cursor: pointer; min-height: 130px;
+      transition: border-color .2s, background .2s;
+    }
+    #upload-zone:hover, #upload-zone.drag-over { border-color: var(--accent); background: rgba(249,115,22,.04); }
+    #upload-zone .lbl { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.6; }
+    #upload-zone .hint { font-size: 10px; color: var(--text-muted); }
+    #file-input { display: none; }
+    #preview-wrap { margin: 0 18px 18px; position: relative; display: none; }
+    #preview-img { width: 100%; border-radius: 3px; border: 1px solid var(--border); display: block; }
+    #remove-btn {
+      position: absolute; top: 7px; right: 7px; background: rgba(0,0,0,.75);
+      border: 1px solid var(--border); color: var(--text-dim); cursor: pointer;
+      border-radius: 2px; font-size: 10px; padding: 2px 6px; font-family: var(--mono);
+    }
+    #remove-btn:hover { color: var(--red); border-color: var(--red); }
+    #scan-btn {
+      margin: 0 18px; width: calc(100% - 36px); padding: 10px;
+      background: var(--accent); color: #000; font-family: var(--mono); font-size: 11px;
+      letter-spacing: .08em; text-transform: uppercase; border: none; cursor: pointer;
+      border-radius: 2px; transition: opacity .2s;
+    }
+    #scan-btn:disabled { opacity: .35; cursor: not-allowed; }
+    #scan-btn:not(:disabled):hover { opacity: .85; }
+    #claude-btn {
+      margin: 8px 18px 0; width: calc(100% - 36px); padding: 10px;
+      background: transparent; color: var(--purple); font-family: var(--mono); font-size: 11px;
+      letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--purple-dim);
+      cursor: pointer; border-radius: 2px; transition: background .2s, border-color .2s;
+    }
+    #claude-btn:disabled { opacity: .35; cursor: not-allowed; }
+    #claude-btn:not(:disabled):hover { background: rgba(167,139,250,.08); border-color: var(--purple); }
+    #minicpm-btn {
+      margin: 8px 18px 0; width: calc(100% - 36px); padding: 10px;
+      background: transparent; color: var(--teal); font-family: var(--mono); font-size: 11px;
+      letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--teal-dim);
+      cursor: pointer; border-radius: 2px; transition: background .2s, border-color .2s;
+    }
+    #minicpm-btn:disabled { opacity: .35; cursor: not-allowed; }
+    #minicpm-btn:not(:disabled):hover { background: rgba(45,212,191,.08); border-color: var(--teal); }
+    #status-bar { margin: 14px 18px 0; font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+    .stage { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .sdot.run  { background: var(--yellow); animation: pulse 1s infinite; }
+    .sdot.done { background: var(--green); }
+    .sdot.err  { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    #history-toggle {
+      margin: 10px 18px 0; width: calc(100% - 36px); padding: 7px;
+      background: transparent; color: var(--text-dim); font-family: var(--mono); font-size: 10px;
+      letter-spacing: .05em; border: 1px solid var(--border); cursor: pointer; border-radius: 2px;
+      transition: border-color .2s, color .2s;
+    }
+    #history-toggle:hover { border-color: var(--border2); color: var(--text); }
+
+    /* ── Panel 2: Raw JSON ── */
+    #raw-json-wrap { padding: 12px; height: 100%; }
+    pre#raw-json { font-family: var(--mono); font-size: 10px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+    .j-key  { color: #7dd3fc; }
+    .j-str  { color: #86efac; }
+    .j-num  { color: #fda4af; }
+    .j-bool { color: #f9a8d4; }
+    .j-null { color: var(--text-muted); }
+
+    /* ── Panel 3: Review & Confirm ── */
+    #review-wrap { padding: 0; }
+
+    .review-toolbar {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+    }
+    #confirm-btn {
+      padding: 8px 20px; background: var(--accent); color: #000;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+      border: none; cursor: pointer; border-radius: 2px; transition: opacity .2s;
+    }
+    #confirm-btn:hover { opacity: .85; }
+    #confirm-btn:disabled { opacity: .35; cursor: not-allowed; }
+    #discard-btn {
+      padding: 8px 14px; background: transparent; color: var(--text-dim);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+      border: 1px solid var(--border); cursor: pointer; border-radius: 2px;
+    }
+    #discard-btn:hover { border-color: var(--red); color: var(--red); }
+    .vendor-badge {
+      margin-left: auto; font-family: var(--mono); font-size: 10px;
+      color: var(--accent); border: 1px solid var(--accent-dim); padding: 2px 8px; border-radius: 2px;
+    }
+
+    .review-meta { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
+    .meta-field { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+    .meta-field label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+    .meta-field input {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--sans); font-size: 13px; padding: 5px 8px; border-radius: 2px;
+      transition: border-color .2s;
+    }
+    .meta-field input:focus { outline: none; border-color: var(--accent); }
+
+    .items-editor { padding: 14px 16px; }
+    .items-editor-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .items-editor-title { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+    #add-item-btn {
+      font-family: var(--mono); font-size: 10px; padding: 4px 10px;
+      background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+      cursor: pointer; border-radius: 2px;
+    }
+    #add-item-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .item-row {
+      border: 1px solid var(--border); border-radius: 3px; margin-bottom: 8px;
+      background: var(--surface2); overflow: hidden;
+    }
+    .item-row.flagged { border-color: rgba(234,179,8,.4); }
+    .item-row-header {
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      border-bottom: 1px solid var(--border); cursor: pointer;
+      user-select: none;
+    }
+    .item-row-header:hover { background: var(--surface3); }
+    .item-name-display { flex: 1; font-size: 13px; font-weight: 500; }
+    .item-total-display { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+    .item-vat-badge { font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 2px; }
+    .vat-y { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.25); }
+    .vat-n { background: rgba(34,197,94,.1);  color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+    .item-flag { font-size: 10px; color: var(--yellow); }
+    .item-conf { font-family: var(--mono); font-size: 9px; }
+    .c-hi { color: var(--green); }
+    .c-md { color: var(--yellow); }
+    .c-lo { color: var(--red); }
+    .delete-item-btn {
+      background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1;
+    }
+    .delete-item-btn:hover { color: var(--red); }
+    .chevron { color: var(--text-muted); font-size: 10px; transition: transform .2s; }
+    .chevron.open { transform: rotate(90deg); }
+
+    .item-fields { display: none; padding: 10px; display: none; }
+    .item-fields.open { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; }
+    .field { display: flex; flex-direction: column; gap: 3px; }
+    .field label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .field input, .field select {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--sans); font-size: 12px; padding: 4px 7px; border-radius: 2px;
+      transition: border-color .2s; width: 100%;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+    .field.full { grid-column: 1 / -1; }
+    .field .receipt-ref { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    .per-kg-display {
+      grid-column: 1 / -1; padding: 6px 8px; background: rgba(249,115,22,.06);
+      border: 1px solid rgba(249,115,22,.2); border-radius: 2px;
+      font-family: var(--mono); font-size: 11px; color: var(--accent);
+    }
+
+    .review-totals {
+      margin: 0 16px 16px; padding: 12px 14px;
+      border: 1px solid var(--border); border-radius: 3px; background: var(--surface2);
+    }
+    .tot-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .tot-row:last-child { border-bottom: none; }
+    .tot-label { color: var(--text-dim); }
+    .tot-row.grand { font-weight: 600; font-size: 15px; }
+    .tot-row.grand .tot-label { color: var(--text); }
+
+    .empty-state { padding: 40px 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 1.9; }
+
+    /* category select options */
+    select option { background: var(--surface2); }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/" style="text-decoration:none;color:inherit">
+    <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2zm6 0h6v6h-2V5.414l-5.293 5.293-1.414-1.414L12.586 4H8V2z"/></svg></div>
+    <span class="logo-name">BASKET</span>
+    <span class="logo-ver">v0.4</span>
+  </a>
+  <nav style="display:flex;gap:2px;margin-right:auto">
+    <a href="/"          style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--accent);background:rgba(249,115,22,.08);border-radius:2px">Receipts</a>
+    <a href="/history"   style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">History</a>
+    <a href="/prices"    style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">Prices</a>
+    <a href="/meals"     style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">Meal Plan</a>
+    <a href="/analytics"    style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">Insights</a>
+    <a href="/household"   style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">Household</a>
+    <a href="/spend-groups" style="padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--text-dim);border-radius:2px">Spend</a>
+  </nav>
+  <div id="health-bar">
+    <div class="hp"><div class="hd" id="hd-api"></div><span>API</span></div>
+    <div class="hp"><div class="hd" id="hd-db"></div><span>DB</span></div>
+    <div class="hp"><div class="hd" id="hd-llm"></div><span id="hd-llm-lbl">LLM</span></div>
+  </div>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:16px;"></div>
+</header>
+
+<div class="workspace">
+
+  <!-- Panel 1: Upload -->
+  <div class="panel">
+    <div class="ph"><span class="pn">01</span> INPUT</div>
+    <div class="pb">
+      <div id="upload-zone">
+        <div style="color:var(--text-muted)">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+        </div>
+        <div class="lbl">Drop receipt here<br>or click to browse</div>
+        <div class="hint">JPEG · PNG · WEBP · max 20 MB</div>
+        <input type="file" id="file-input" accept="image/*">
+      </div>
+      <div id="preview-wrap">
+        <img id="preview-img" src="" alt="">
+        <button id="remove-btn">✕</button>
+      </div>
+      <div id="status-bar"></div>
+      <button id="scan-btn" disabled style="margin-top:14px">▶ Run Pipeline</button>
+      <button id="claude-btn" disabled>✦ Try Claude</button>
+      <button id="minicpm-btn" disabled>⬡ Try MiniCPM</button>
+      <button id="history-toggle">⟳ History</button>
+      <div id="history-list" style="display:none; margin:10px 18px 18px; font-size:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Panel 2: Raw JSON -->
+  <div class="panel">
+    <div class="ph">
+      <span class="pn">02</span> RAW JSON
+      <span id="copy-btn" onclick="copyJson()"
+        style="margin-left:auto;font-size:9px;font-family:var(--mono);color:var(--text-muted);cursor:pointer;padding:2px 6px;border:1px solid var(--border);border-radius:2px;">copy</span>
+    </div>
+    <div class="pb">
+      <div id="raw-json-wrap"><div class="empty-state">Raw model response<br>will appear here.</div></div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Review & Confirm -->
+  <div class="panel">
+    <div class="ph"><span class="pn">03</span> REVIEW &amp; CONFIRM<span id="model-tag" style="margin-left:auto;font-size:9px;color:var(--accent);"></span></div>
+    <div class="pb">
+      <div id="review-wrap">
+        <div class="empty-state">After scanning, review and<br>correct extracted data here,<br>then confirm to save.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedFile  = null;
+let lastRaw       = null;
+let pendingResult = null;  // pipeline result waiting for confirm
+
+const CATEGORIES = ['fruit','vegetable','dairy','meat','seafood','bakery','pantry','frozen',
+  'beverages','snacks','alcohol','household','toiletries','clothing','footwear',
+  'accessories','beauty','homeware','sport','discount','other'];
+
+const UNIT_TYPES = ['unit','weight_kg','weight_g'];
+
+// ── Health ─────────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const d = await fetch('/health').then(r => r.json());
+    dot('hd-api', d.api === 'ok' ? 'ok' : 'err');
+    dot('hd-db',  d.db  === 'ok' ? 'ok' : 'err');
+    const ol = d.ollama || {};
+    if (!ol.reachable) { dot('hd-llm','err'); }
+    else if (!ol.model_loaded) { dot('hd-llm','warn'); ge('hd-llm-lbl').textContent='LLM (no model)'; }
+    else { dot('hd-llm','ok'); ge('hd-llm-lbl').textContent = ol.configured_model || 'LLM'; }
+  } catch { dot('hd-api','err'); }
+}
+function dot(id, s) { ge(id).className = 'hd ' + s; }
+checkHealth();
+setInterval(checkHealth, 15000);
+
+// ── Upload ─────────────────────────────────────────────────────────────────
+const zone        = ge('upload-zone');
+const input       = ge('file-input');
+const scanBtn     = ge('scan-btn');
+const claudeBtn   = ge('claude-btn');
+const minicpmBtn  = ge('minicpm-btn');
+const _scanBtns   = [scanBtn, claudeBtn, minicpmBtn];
+
+zone.addEventListener('click', () => input.click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+input.addEventListener('change', () => { if (input.files[0]) setFile(input.files[0]); });
+
+function setFile(file) {
+  selectedFile = file;
+  const r = new FileReader();
+  r.onload = e => { ge('preview-img').src = e.target.result; ge('preview-wrap').style.display='block'; zone.style.display='none'; };
+  r.readAsDataURL(file);
+  _scanBtns.forEach(b => b.disabled = false);
+  clearResults();
+}
+
+ge('remove-btn').addEventListener('click', () => {
+  selectedFile = null;
+  ge('preview-wrap').style.display = 'none';
+  zone.style.display = 'flex';
+  _scanBtns.forEach(b => b.disabled = true);
+  input.value = '';
+  clearResults();
+});
+
+// ── Scan ───────────────────────────────────────────────────────────────────
+async function runScan(endpoint, model = null) {
+  if (!selectedFile) return;
+  _scanBtns.forEach(b => b.disabled = true);
+  clearResults();
+
+  const tag = model ? ` (${model.split(':')[0]})` : endpoint === '/scan/claude' ? ' (Claude)' : '';
+  setStage('vendor',  'run',  `Detecting vendor${tag}…`);
+  setStage('extract', 'run',  `Extracting data${tag}…`);
+  setStage('review',  'pend', 'Waiting for review…');
+
+  const fd  = new FormData();
+  fd.append('file', selectedFile);
+  const url = model ? `${endpoint}?model=${encodeURIComponent(model)}` : endpoint;
+
+  try {
+    const r    = await fetch(url, { method: 'POST', body: fd });
+    const data = await r.json();
+
+    if (!r.ok) { setStage('vendor','err','Error: ' + (data.detail || r.statusText)); return; }
+
+    lastRaw = data;
+    renderJson(data);
+
+    setStage('vendor', 'done', `Vendor: ${data.vendor || 'Unknown'}`);
+
+    if (data.llm_error) {
+      setStage('extract','err','LLM error: ' + data.llm_error);
+    } else {
+      setStage('extract','done', `${(data.extracted?.items||[]).length} items extracted`);
+      setStage('review','run','Review required before saving →');
+      pendingResult = data;
+      renderReview(data);
+    }
+  } catch(e) {
+    setStage('vendor','err','Request failed: ' + e.message);
+  } finally {
+    _scanBtns.forEach(b => b.disabled = false);
+  }
+}
+
+scanBtn.addEventListener('click',    () => runScan('/scan'));
+claudeBtn.addEventListener('click',  () => runScan('/scan/claude'));
+minicpmBtn.addEventListener('click', () => runScan('/scan', 'minicpm-v'));
+
+// ── Review render ──────────────────────────────────────────────────────────
+function renderReview(data) {
+  const ext = data.extracted || {};
+  ge('model-tag').textContent = data.model_used || '';
+
+  const store = ext.store || {};
+  const date  = ext.date  || {};
+
+  let html = `
+    <div class="review-toolbar">
+      <button id="confirm-btn" onclick="confirmSave()">✓ Confirm &amp; Save</button>
+      <button id="discard-btn" onclick="discardReview()">✕ Discard</button>
+      <span class="vendor-badge">${esc(data.vendor || 'Unknown')}</span>
+    </div>
+
+    <div class="review-meta">
+      <div class="meta-field">
+        <label>Store</label>
+        <input id="r-store" type="text" value="${esc(store.name||'')}">
+      </div>
+      <div class="meta-field">
+        <label>Date</label>
+        <input id="r-date" type="date" value="${esc(date.value||'')}">
+      </div>
+      <div class="meta-field">
+        <label>Total</label>
+        <input id="r-total" type="number" step="0.01" value="${ext.total||''}">
+      </div>
+    </div>
+
+    <div class="items-editor">
+      <div class="items-editor-header">
+        <span class="items-editor-title">Line Items (<span id="item-count">${(ext.items||[]).length}</span>)</span>
+        <button id="add-item-btn" onclick="addItem()">+ Add item</button>
+      </div>
+      <div id="items-list">`;
+
+  (ext.items || []).forEach((item, idx) => {
+    html += itemRowHtml(item, idx);
+  });
+
+  html += `</div></div>`;
+
+  // Totals
+  if (ext.subtotal != null || ext.vat_total != null || ext.total != null) {
+    html += `<div class="review-totals">`;
+    if (ext.subtotal  != null) html += totRow('Subtotal',  fmt(ext.subtotal,  ext.currency));
+    if (ext.vat_total != null) html += totRow('VAT (15%)', fmt(ext.vat_total, ext.currency));
+    if (ext.total     != null) html += totRow('Total',     fmt(ext.total,     ext.currency), true);
+    html += `</div>`;
+  }
+
+  ge('review-wrap').innerHTML = html;
+
+  // Wire up toggle expand on each item header
+  document.querySelectorAll('.item-row-header').forEach(el => {
+    el.addEventListener('click', function() {
+      const row    = this.closest('.item-row');
+      const fields = row.querySelector('.item-fields');
+      const chev   = this.querySelector('.chevron');
+      const isOpen = fields.classList.contains('open');
+      fields.classList.toggle('open', !isOpen);
+      chev.classList.toggle('open', !isOpen);
+    });
+  });
+}
+
+function itemRowHtml(item, idx) {
+  const name    = item.display_name || item.name || item.receipt_name || 'Unknown';
+  const total   = item.total_price;
+  const vatCls  = item.vat_applicable ? 'vat-y' : 'vat-n';
+  const vatLbl  = item.vat_applicable ? '15%' : 'EXEMPT';
+  const conf    = item.confidence;
+  const confCls = conf == null ? '' : conf >= .85 ? 'c-hi' : conf >= .70 ? 'c-md' : 'c-lo';
+  const hasPkg  = item.per_kg_price != null || (item.weight_kg && item.total_price);
+
+  let pkgHtml = '';
+  if (hasPkg) {
+    const pkgPrice = item.per_kg_price ?? (item.weight_kg ? (item.total_price / item.weight_kg).toFixed(2) : null);
+    if (pkgPrice) pkgHtml = `<div class="per-kg-display">R${Number(pkgPrice).toFixed(2)} / kg</div>`;
+  }
+
+  const catOptions = CATEGORIES.map(c =>
+    `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
+  const unitOptions = UNIT_TYPES.map(u =>
+    `<option value="${u}" ${u === item.unit_type ? 'selected' : ''}>${u}</option>`).join('');
+
+  return `
+    <div class="item-row ${item.flag ? 'flagged' : ''}" data-idx="${idx}" data-receipt-name="${esc(item.receipt_name || '')}">
+      <div class="item-row-header">
+        <span class="chevron">▶</span>
+        <span class="item-name-display">${esc(name)}</span>
+        <span class="item-total-display">${total != null ? fmt(total,'ZAR') : '—'}</span>
+        <span class="item-vat-badge ${vatCls}">${vatLbl}</span>
+        ${conf != null ? `<span class="item-conf ${confCls}">${Math.round(conf*100)}%</span>` : ''}
+        ${item.flag ? `<span class="item-flag" title="${esc(item.flag)}">⚠</span>` : ''}
+        <button class="delete-item-btn" onclick="deleteItem(event, ${idx})">×</button>
+      </div>
+      <div class="item-fields">
+        <div class="field full">
+          <label>Display Name</label>
+          <input type="text" data-field="display_name" value="${esc(name)}">
+          ${item.receipt_name ? `<span class="receipt-ref">${esc(item.receipt_name)}</span>` : ''}
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select data-field="category">${catOptions}</select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" step="0.001" data-field="quantity" value="${item.quantity ?? 1}">
+        </div>
+        <div class="field">
+          <label>Unit Type</label>
+          <select data-field="unit_type">${unitOptions}</select>
+        </div>
+        <div class="field">
+          <label>Weight (kg)</label>
+          <input type="number" step="0.001" data-field="weight_kg" value="${item.weight_kg ?? ''}">
+        </div>
+        <div class="field">
+          <label>Unit Price (R)</label>
+          <input type="number" step="0.01" data-field="unit_price" value="${item.unit_price ?? ''}">
+        </div>
+        <div class="field">
+          <label>Total Price (R)</label>
+          <input type="number" step="0.01" data-field="total_price" value="${item.total_price ?? ''}">
+        </div>
+        <div class="field">
+          <label>VAT Applicable</label>
+          <select data-field="vat_applicable">
+            <option value="true"  ${item.vat_applicable  ? 'selected' : ''}>15% VAT</option>
+            <option value="false" ${!item.vat_applicable ? 'selected' : ''}>Exempt</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Flag / Note</label>
+          <input type="text" data-field="flag" value="${esc(item.flag||'')}">
+        </div>
+        ${pkgHtml}
+      </div>
+    </div>`;
+}
+
+function addItem() {
+  if (!pendingResult) return;
+  const items = pendingResult.extracted.items || [];
+  items.push({
+    receipt_name: '', display_name: 'New Item', category: 'other',
+    quantity: 1, unit_type: 'unit', weight_kg: null, unit_price: null,
+    per_kg_price: null, total_price: null, vat_applicable: true,
+    confidence: null, flag: null,
+  });
+  pendingResult.extracted.items = items;
+  ge('item-count').textContent = items.length;
+  const list = ge('items-list');
+  const idx  = items.length - 1;
+  const div  = document.createElement('div');
+  div.innerHTML = itemRowHtml(items[idx], idx);
+  const row = div.firstElementChild;
+  list.appendChild(row);
+  // open fields immediately
+  row.querySelector('.item-fields').classList.add('open');
+  row.querySelector('.chevron').classList.add('open');
+  row.querySelector('.item-row-header').addEventListener('click', function() {
+    const fields = row.querySelector('.item-fields');
+    const chev   = row.querySelector('.chevron');
+    fields.classList.toggle('open');
+    chev.classList.toggle('open');
+  });
+}
+
+function deleteItem(e, idx) {
+  e.stopPropagation();
+  const row = document.querySelector(`.item-row[data-idx="${idx}"]`);
+  if (row) row.remove();
+  ge('item-count').textContent = document.querySelectorAll('.item-row').length;
+}
+
+// ── Confirm & Save ─────────────────────────────────────────────────────────
+async function confirmSave() {
+  if (!pendingResult) return;
+
+  // Collect current form state
+  const ext      = pendingResult.extracted || {};
+  const storeName = ge('r-store')?.value || ext.store?.name;
+  const dateVal   = ge('r-date')?.value   || ext.date?.value;
+  const totalVal  = parseFloat(ge('r-total')?.value) || ext.total;
+
+  const items = [];
+  document.querySelectorAll('.item-row').forEach(row => {
+    const get = field => {
+      const el = row.querySelector(`[data-field="${field}"]`);
+      return el ? el.value : null;
+    };
+    const vatVal = get('vat_applicable');
+    const totPrice = parseFloat(get('total_price'));
+    const wkg      = parseFloat(get('weight_kg'));
+    const perKg    = (!isNaN(wkg) && wkg > 0 && !isNaN(totPrice)) ? totPrice / wkg : null;
+
+    items.push({
+      receipt_name:   row.dataset.receiptName || null,
+      display_name:   get('display_name'),
+      name:           get('display_name'),
+      category:       get('category'),
+      quantity:       parseFloat(get('quantity')) || 1,
+      unit_type:      get('unit_type'),
+      weight_kg:      isNaN(wkg) ? null : wkg || null,
+      unit_price:     parseFloat(get('unit_price')) || null,
+      per_kg_price:   perKg,
+      total_price:    isNaN(totPrice) ? null : totPrice,
+      vat_applicable: vatVal === 'true',
+      flag:           get('flag') || null,
+    });
+  });
+
+  const payload = {
+    image_path: pendingResult.image_path,
+    vendor:     pendingResult.vendor,
+    extracted: {
+      ...ext,
+      store:     { name: storeName, confidence: ext.store?.confidence },
+      date:      { value: dateVal,  confidence: ext.date?.confidence },
+      total:     totalVal,
+      items,
+    },
+  };
+
+  const btn = ge('confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const r = await fetch('/receipts/confirm', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+    setStage('review', 'done', `Saved as receipt #${d.receipt_id}`);
+    btn.textContent = `✓ Saved (#${d.receipt_id})`;
+    pendingResult = null;
+  } catch(e) {
+    setStage('review', 'err', 'Save failed: ' + e.message);
+    btn.textContent = 'Confirm & Save';
+    btn.disabled = false;
+  }
+}
+
+function discardReview() {
+  pendingResult = null;
+  clearResults();
+  setStage('review','err','Discarded');
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+ge('history-toggle').addEventListener('click', async () => {
+  const list = ge('history-list');
+  if (list.style.display !== 'none') { list.style.display = 'none'; return; }
+  list.style.display = 'block';
+  list.innerHTML = '<div style="color:var(--text-muted);font-family:var(--mono);font-size:10px">Loading…</div>';
+  try {
+    const recs = await fetch('/receipts?limit=20').then(r => r.json());
+    if (!recs.length) { list.innerHTML = '<div style="color:var(--text-muted);font-family:var(--mono);font-size:10px">No saved receipts.</div>'; return; }
+    list.innerHTML = recs.map(r => `
+      <div style="padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="loadReceipt(${r.id})">
+        <div style="font-weight:500;font-size:12px">${esc(r.store||'Unknown')}</div>
+        <div style="font-size:10px;color:var(--text-dim);font-family:var(--mono)">#${r.id} · ${r.date||'—'} · ${r.total!=null?fmt(r.total,r.currency):'—'} · ${r.item_count} items</div>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = `<div style="color:var(--red);font-family:var(--mono);font-size:10px">${e.message}</div>`; }
+});
+
+async function loadReceipt(id) {
+  const d = await fetch(`/receipts/${id}`).then(r => r.json());
+  renderJson(d);
+  ge('review-wrap').innerHTML = `<div class="empty-state">Saved receipt #${id}<br>${esc(d.store||'')} · ${d.date||'—'}<br>${d.item_count} items · ${fmt(d.total, d.currency)}<br><br><span style="color:var(--text-muted)">Re-scan to edit.</span></div>`;
+}
+
+// ── JSON panel ─────────────────────────────────────────────────────────────
+function renderJson(data) {
+  ge('raw-json-wrap').innerHTML = `<pre id="raw-json" style="padding:12px">${synHi(JSON.stringify(data,null,2))}</pre>`;
+}
+function synHi(json) {
+  return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      if (/^"/.test(m)) return /:$/.test(m) ? `<span class="j-key">${m}</span>` : `<span class="j-str">${m}</span>`;
+      if (/true|false/.test(m)) return `<span class="j-bool">${m}</span>`;
+      if (/null/.test(m))       return `<span class="j-null">${m}</span>`;
+      return `<span class="j-num">${m}</span>`;
+    });
+}
+function copyJson() {
+  if (!lastRaw) return;
+  navigator.clipboard.writeText(JSON.stringify(lastRaw,null,2));
+  const b = ge('copy-btn'); b.textContent='copied!'; setTimeout(()=>b.textContent='copy',1500);
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+function setStage(id, state, label) {
+  const bar = ge('status-bar');
+  let el = document.getElementById('st-'+id);
+  if (!el) { el = document.createElement('div'); el.id='st-'+id; el.className='stage'; bar.appendChild(el); }
+  const cls = {run:'run',done:'done',err:'err',pend:''}[state]||'';
+  el.innerHTML = `<div class="sdot ${cls}"></div><span>${label}</span>`;
+}
+
+function clearResults() {
+  ge('status-bar').innerHTML = '';
+  ge('raw-json-wrap').innerHTML = '<div class="empty-state">Raw model response<br>will appear here.</div>';
+  ge('review-wrap').innerHTML   = '<div class="empty-state">After scanning, review and<br>correct extracted data here,<br>then confirm to save.</div>';
+  ge('model-tag').textContent   = '';
+  lastRaw = null; pendingResult = null;
+}
+
+// ── Util ───────────────────────────────────────────────────────────────────
+function ge(id) { return document.getElementById(id); }
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(v,cur) { if(v==null)return'—'; return(cur==='ZAR'?'R':(cur||''))+Number(v).toFixed(2); }
+function totRow(lbl,val,grand=false) { return `<div class="tot-row${grand?' grand':''}" ><span class="tot-label">${lbl}</span><span>${val}</span></div>`; }
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

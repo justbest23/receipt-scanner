@@ -1,0 +1,35 @@
+{
+  "name": "Shoprite",
+  "aliases": [
+    "shoprite", "shoprite supermarkets", "shoprite holdings",
+    "shoprite pty", "shoprite (pty) ltd"
+  ],
+  "country": "ZA",
+  "currency": "ZAR",
+  "vat_rate": 0.15,
+  "type": "grocery",
+  "vat_indicator": {
+    "type": "unknown",
+    "description": "PLACEHOLDER — needs a real Shoprite receipt to document VAT marking convention."
+  },
+  "quantity_rules": {
+    "description": "PLACEHOLDER — needs a real Shoprite receipt to document quantity patterns."
+  },
+  "product_name_rules": {
+    "description": "PLACEHOLDER — needs a real Shoprite receipt to document naming conventions."
+  },
+  "weight_rules": {
+    "description": "PLACEHOLDER — needs a real Shoprite receipt to document weight handling."
+  },
+  "discount_rules": {
+    "description": "PLACEHOLDER — needs a real Shoprite receipt to document discount line format."
+  },
+  "store_name_rules": {
+    "description": "Always output 'Shoprite'. Do not confuse with Checkers which is a sister brand.",
+    "always_output": "Shoprite"
+  },
+  "prompt_notes": [
+    "PLACEHOLDER — this vendor profile is incomplete. Extraction will use generic rules.",
+    "When you process a real Shoprite receipt, update this file with vendor-specific rules."
+  ]
+}
