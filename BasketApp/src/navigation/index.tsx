@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LoginScreen from '../screens/LoginScreen';
 import ScanScreen from '../screens/ScanScreen';
@@ -41,21 +42,23 @@ const STACK_HEADER = {
 
 function MainTabs() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
-        tabBarStyle: { backgroundColor: COLORS.surface, borderTopColor: COLORS.border },
-        tabBarActiveTintColor: COLORS.accent,
-        tabBarInactiveTintColor: COLORS.textDim,
-        tabBarLabelStyle: { fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.5 },
-      })}>
-      <Tab.Screen name="Scan" component={ScanScreen} />
-      <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Meals" component={MealsScreen} />
-      <Tab.Screen name="Groups" component={GroupsStack} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
+          tabBarStyle: { backgroundColor: COLORS.surface, borderTopColor: COLORS.border },
+          tabBarActiveTintColor: COLORS.accent,
+          tabBarInactiveTintColor: COLORS.textDim,
+          tabBarLabelStyle: { fontFamily: 'monospace', fontSize: 9, letterSpacing: 0.5 },
+        })}>
+        <Tab.Screen name="Scan" component={ScanScreen} />
+        <Tab.Screen name="History" component={HistoryScreen} />
+        <Tab.Screen name="Meals" component={MealsScreen} />
+        <Tab.Screen name="Groups" component={GroupsStack} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
+      </Tab.Navigator>
+    </SafeAreaView>
   );
 }
 

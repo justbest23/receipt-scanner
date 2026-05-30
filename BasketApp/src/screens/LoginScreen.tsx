@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { useAuth } from '../AuthContext';
 import { COLORS } from '../theme';
@@ -25,7 +26,8 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={s.root}>
+    <KeyboardAvoidingView style={s.kav} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.card}>
         <View style={s.logoRow}>
           <View style={s.logoMark}><Text style={s.logoIcon}>⬡</Text></View>
@@ -61,11 +63,13 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bg, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  root: { flex: 1, backgroundColor: COLORS.bg },
+  kav: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: { width: '100%', maxWidth: 360, backgroundColor: COLORS.surface, borderRadius: 6, padding: 32, borderWidth: 1, borderColor: COLORS.border },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   logoMark: { width: 32, height: 32, borderWidth: 1.5, borderColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
