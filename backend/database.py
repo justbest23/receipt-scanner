@@ -107,7 +107,13 @@ def save_receipt(db, payload: dict, image_path: str | None = None, user_id: int 
     """
     from models import Receipt, ReceiptItem
 
-    ext   = payload.get("extracted", payload)  # accept both wrapped and unwrapped
+    ext = payload.get("extracted", payload)  # accept both wrapped and unwrapped
+    if isinstance(ext, str):
+        import json as _json
+        try:
+            ext = _json.loads(ext)
+        except (_json.JSONDecodeError, TypeError):
+            ext = {}
     store = ext.get("store", {})
     date  = ext.get("date",  {})
 

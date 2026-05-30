@@ -1102,10 +1102,15 @@ async def admin_import_uitkyk_catalog(
     if not products:
         raise HTTPException(500, "Catalog crawl returned no products")
 
-    # Normalize product names → canonical ingredients
-    raw_names = [p.name for p in products]
-    logger.info(f"Uitkyk catalog import: normalizing {len(raw_names)} product names…")
-    mapping = normalize_names(raw_names)
+    # Normalize product names → canonical ingredients (batch of 80 to stay under token limit)
+    unique_names = list(dict.fromkeys(p.name for p in products))
+    logger.info(f"Uitkyk catalog import: normalizing {len(unique_names)} unique names in batches…")
+    mapping: dict[str, str] = {}
+    BATCH = 80
+    for i in range(0, len(unique_names), BATCH):
+        batch = unique_names[i:i + BATCH]
+        mapping.update(normalize_names(batch))
+        logger.info(f"Uitkyk catalog import: normalized {min(i+BATCH, len(unique_names))}/{len(unique_names)}")
 
     # Clear old Uitkyk listings and save fresh ones
     db.query(models.StoreListing).filter(models.StoreListing.store == "uitkyk").delete()
