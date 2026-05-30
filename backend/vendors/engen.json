@@ -8,11 +8,12 @@
   "currency": "ZAR",
   "type": "fuel",
   "quantity_rules": {
-    "description": "Fuel lines show: [Fuel type]  P [pump#]  [price_per_litre]  R  [total_amount]. The quantity (litres) is NOT printed — calculate it as total_price / unit_price.",
+    "description": "Fuel lines show: [Fuel type]  P [pump#]  [price_per_litre]  R  [total_amount]. IMPORTANT: unit_type MUST be 'litre' for all fuel items. The quantity (litres) is NOT printed — calculate it as round(total_price / unit_price, 2).",
     "fuel_line_format": "[Fuel type]  P [pump_number]  [price_per_litre]  R  [total_amount]",
+    "unit_type_rule": "ALWAYS set unit_type to exactly 'litre' for fuel items. Never use 'unit' for fuel.",
     "examples": [
-      "Diesel 50ppm  P 6  17.390  R  600.00  →  name='Diesel 50ppm', unit_type='litre', unit_price=17.390, total_price=600.00, quantity=round(600.00/17.390, 2)=34.50",
-      "Unleaded 93  P 3  22.150  R  443.00  →  name='Unleaded 93', unit_type='litre', unit_price=22.150, total_price=443.00, quantity=round(443.00/22.150, 2)=20.00"
+      "Diesel 50ppm  P 6  17.390  R  600.00  →  name='Diesel 50ppm', unit_type='litre', unit_price=17.390, total_price=600.00, quantity=34.50 (=600.00/17.390)",
+      "Unleaded 93  P 3  22.150  R  443.00  →  name='Unleaded 93', unit_type='litre', unit_price=22.150, total_price=443.00, quantity=20.00 (=443.00/22.150)"
     ]
   },
   "product_name_rules": {
@@ -30,8 +31,9 @@
     "always_output": "Engen"
   },
   "prompt_notes": [
+    "CRITICAL: unit_type must be the string 'litre' for every fuel line item — not 'unit', not 'weight_kg'.",
     "Fuel quantity (litres) is never printed on the receipt. Always calculate: quantity = round(total_price / unit_price, 2).",
-    "Set unit_type='litre' and per_kg_price=unit_price for all fuel items so the price-per-litre is stored.",
+    "Set per_kg_price=unit_price for all fuel items so the price-per-litre is stored for display.",
     "Set category='fuel' for all fuel items.",
     "VAT on fuel in South Africa is typically included in the pump price — set vat_applicable=true.",
     "The P number (e.g. 'P 6') is the pump number — do not include it in the item name.",
