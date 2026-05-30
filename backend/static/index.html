@@ -418,7 +418,7 @@ async function loadCategories() {
   } catch {}
 }
 
-const UNIT_TYPES = ['unit','weight_kg','weight_g'];
+const UNIT_TYPES = ['unit','weight_kg','weight_g','litre'];
 
 // ── Health ─────────────────────────────────────────────────────────────────
 async function checkHealth() {
@@ -592,7 +592,8 @@ function itemRowHtml(item, idx) {
   let pkgHtml = '';
   if (hasPkg) {
     const pkgPrice = item.per_kg_price ?? (item.weight_kg ? (item.total_price / item.weight_kg).toFixed(2) : null);
-    if (pkgPrice) pkgHtml = `<div class="per-kg-display">R${Number(pkgPrice).toFixed(2)} / kg</div>`;
+    const pkgUnit  = item.unit_type === 'litre' ? 'L' : 'kg';
+    if (pkgPrice) pkgHtml = `<div class="per-kg-display">R${Number(pkgPrice).toFixed(2)} / ${pkgUnit}</div>`;
   }
 
   const unitOptions = UNIT_TYPES.map(u =>

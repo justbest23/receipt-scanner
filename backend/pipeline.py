@@ -46,7 +46,7 @@ JSON STRUCTURE:
       "display_name": "human-readable decoded name",
       "category": "see category list below",
       "quantity": number,
-      "unit_type": "unit | weight_kg | weight_g",
+      "unit_type": "unit | weight_kg | weight_g | litre",
       "weight_kg": null or number,
       "unit_price": null or number,
       "per_kg_price": null or number,
@@ -69,7 +69,7 @@ JSON STRUCTURE:
 CATEGORY LIST:
 fruit | vegetable | dairy | meat | seafood | bakery | pantry | frozen |
 beverages | snacks | alcohol | household | toiletries | clothing | footwear |
-accessories | beauty | homeware | sport | discount | other
+accessories | beauty | homeware | sport | fuel | discount | other
 
 GENERAL RULES (apply when no vendor-specific rule overrides):
 - date must always be formatted as YYYY-MM-DD
