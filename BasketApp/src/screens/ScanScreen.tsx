@@ -57,11 +57,12 @@ export default function ScanScreen() {
     setError('');
     try {
       const data = await api.scan(asset.uri!, asset.type ?? 'image/jpeg', asset.fileName ?? 'receipt.jpg', useClaude);
-      setStore(data.store || '');
-      setDate(data.date || '');
-      setTotal(data.total != null ? String(data.total) : '');
-      setCurrency(data.currency || 'ZAR');
-      setItems(resultToItems(data.items));
+      const ext = data.extracted || {};
+      setStore(ext.store?.name || '');
+      setDate(ext.date?.value || '');
+      setTotal(ext.total != null ? String(ext.total) : '');
+      setCurrency(ext.currency || 'ZAR');
+      setItems(resultToItems(ext.items));
       setStage('review');
     } catch (e: any) {
       setError(e.message || 'Scan failed');
