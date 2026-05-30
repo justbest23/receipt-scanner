@@ -233,6 +233,28 @@ def vendors(user: models.User = Depends(auth.get_current_user)):
     return {"vendors": list_vendors()}
 
 
+_DEFAULT_CATEGORIES = [
+    "fruit", "vegetable", "dairy", "meat", "seafood", "bakery", "pantry",
+    "frozen", "beverages", "snacks", "alcohol", "household", "toiletries",
+    "clothing", "footwear", "accessories", "beauty", "homeware", "sport",
+    "fuel", "discount", "other",
+]
+
+@app.get("/categories")
+def list_categories(
+    user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    from sqlalchemy import distinct as sa_distinct
+    used = [
+        r[0] for r in db.query(sa_distinct(models.ReceiptItem.category))
+        .filter(models.ReceiptItem.category.isnot(None))
+        .all()
+    ]
+    merged = sorted(set(_DEFAULT_CATEGORIES) | set(used))
+    return {"categories": merged}
+
+
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 
 @app.get("/register", response_class=HTMLResponse, include_in_schema=False)

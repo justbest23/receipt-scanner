@@ -279,14 +279,7 @@
   <input type="date" id="to-date">
   <span class="filter-sep">|</span>
   <span class="filter-label">CATEGORY</span>
-  <select id="cat-select">
-    <option value="">All</option>
-    <option>fruit</option><option>vegetable</option><option>dairy</option>
-    <option>meat</option><option>seafood</option><option>bakery</option>
-    <option>pantry</option><option>frozen</option><option>beverages</option>
-    <option>snacks</option><option>alcohol</option><option>household</option>
-    <option>toiletries</option><option>beauty</option><option>other</option>
-  </select>
+  <select id="cat-select"><option value="">All</option></select>
   <span class="filter-sep">|</span>
   <span class="filter-label">STORE</span>
   <select id="store-select"><option value="">All</option></select>
@@ -616,8 +609,21 @@ async function loadStores() {
   } catch {}
 }
 
+async function loadCategories() {
+  try {
+    const d = await fetch('/categories').then(r => r.json());
+    const sel = ge('cat-select');
+    d.categories.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  } catch {}
+}
+
 // ── Initial load ──────────────────────────────────────────────────────────────
 loadStores();
+loadCategories();
 run();
 </script>
 <script src="/static/auth.js"></script>

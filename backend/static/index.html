@@ -319,6 +319,7 @@
   <link rel="stylesheet" href="/static/mobile.css">
 </head>
 <body>
+<datalist id="cat-datalist"></datalist>
 
 <header>
   <a class="logo" href="/" style="text-decoration:none;color:inherit">
@@ -407,9 +408,15 @@ let selectedFile  = null;
 let lastRaw       = null;
 let pendingResult = null;  // pipeline result waiting for confirm
 
-const CATEGORIES = ['fruit','vegetable','dairy','meat','seafood','bakery','pantry','frozen',
-  'beverages','snacks','alcohol','household','toiletries','clothing','footwear',
-  'accessories','beauty','homeware','sport','discount','other'];
+let CATEGORIES = [];
+async function loadCategories() {
+  try {
+    const r = await fetch('/categories');
+    if (r.ok) CATEGORIES = (await r.json()).categories || [];
+    const dl = document.getElementById('cat-datalist');
+    if (dl) dl.innerHTML = CATEGORIES.map(c => `<option value="${c}">`).join('');
+  } catch {}
+}
 
 const UNIT_TYPES = ['unit','weight_kg','weight_g'];
 
@@ -588,8 +595,6 @@ function itemRowHtml(item, idx) {
     if (pkgPrice) pkgHtml = `<div class="per-kg-display">R${Number(pkgPrice).toFixed(2)} / kg</div>`;
   }
 
-  const catOptions = CATEGORIES.map(c =>
-    `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
   const unitOptions = UNIT_TYPES.map(u =>
     `<option value="${u}" ${u === item.unit_type ? 'selected' : ''}>${u}</option>`).join('');
 
@@ -612,7 +617,7 @@ function itemRowHtml(item, idx) {
         </div>
         <div class="field">
           <label>Category</label>
-          <select data-field="category">${catOptions}</select>
+          <input type="text" list="cat-datalist" data-field="category" value="${esc(item.category||'other')}">
         </div>
         <div class="field">
           <label>Quantity</label>
@@ -840,6 +845,7 @@ function totRow(lbl,val,grand=false) { return `<div class="tot-row${grand?' gran
     var t = document.documentElement.getAttribute('data-theme') || 'dark';
     document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
   })();
+  loadCategories();
 </script>
 </body>
 </html>
