@@ -1214,6 +1214,44 @@ def admin_normalize_items(
     return {"normalized": len(items), "unique_names": len(unique_names)}
 
 
+@app.post("/admin/backfill-store-listings")
+def admin_backfill_store_listings(
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    """Backfill store_listings from all scanned receipts that have prices."""
+    receipts = db.query(models.Receipt).filter(models.Receipt.store_name.isnot(None)).all()
+    upserted = 0
+    for receipt in receipts:
+        store = receipt.store_name.lower().replace(" ", "_")
+        for item in receipt.items:
+            price = item.unit_price or item.total_price
+            if not price or not item.canonical_name:
+                continue
+            existing = db.query(models.StoreListing).filter(
+                models.StoreListing.store == store,
+                models.StoreListing.store_product_name == item.name,
+            ).first()
+            if existing:
+                existing.price        = price
+                existing.price_per_kg = item.per_kg_price
+                existing.in_stock     = True
+            else:
+                db.add(models.StoreListing(
+                    store              = store,
+                    store_product_name = item.name,
+                    search_query       = (item.canonical_name or item.name).lower(),
+                    price              = price,
+                    price_per_kg       = item.per_kg_price,
+                    unit_label         = item.unit_type,
+                    in_stock           = True,
+                ))
+            upserted += 1
+    db.commit()
+    logger.info(f"Backfilled {upserted} store listings from {len(receipts)} receipts")
+    return {"upserted": upserted, "receipts_processed": len(receipts)}
+
+
 @app.post("/admin/backfill-kg-price")
 def admin_backfill_kg_price(
     admin: models.User = Depends(auth.require_admin),
@@ -2558,24 +2596,59 @@ def _load_corrections(db) -> dict[str, str]:
 
 
 def _normalize_receipt_items(receipt_id: int):
-    """Background task: call Claude Haiku to fill canonical_name for all items on a receipt."""
+    """Background task: normalize canonical names and upsert store listings from receipt data."""
     db = database.SessionLocal()
     try:
         items = db.query(models.ReceiptItem).filter(models.ReceiptItem.receipt_id == receipt_id).all()
         if not items:
             return
+
+        # Normalize names
         corrections = _load_corrections(db)
         to_normalize = [i for i in items if not i.canonical_name]
-        if not to_normalize:
-            return
-        names = [i.name for i in to_normalize]
-        mapping = normalize_names(names, corrections=corrections)
-        for item in to_normalize:
-            item.canonical_name = mapping.get(item.name) or item.name
-        db.commit()
-        logger.info(f"Normalized {len(items)} items for receipt #{receipt_id}")
+        if to_normalize:
+            names = [i.name for i in to_normalize]
+            mapping = normalize_names(names, corrections=corrections)
+            for item in to_normalize:
+                item.canonical_name = mapping.get(item.name) or item.name
+            db.commit()
+            logger.info(f"Normalized {len(to_normalize)} items for receipt #{receipt_id}")
+
+        # Upsert store_listings from scanned receipt prices
+        receipt = db.query(models.Receipt).filter(models.Receipt.id == receipt_id).first()
+        if receipt and receipt.store_name:
+            store = receipt.store_name.lower().replace(" ", "_")
+            updated = 0
+            for item in items:
+                price = item.unit_price or item.total_price
+                if not price or not item.canonical_name:
+                    continue
+                search_q = item.canonical_name.lower()
+                existing = db.query(models.StoreListing).filter(
+                    models.StoreListing.store == store,
+                    models.StoreListing.store_product_name == item.name,
+                ).first()
+                if existing:
+                    existing.price        = price
+                    existing.price_per_kg = item.per_kg_price
+                    existing.unit_label   = item.unit_type
+                    existing.in_stock     = True
+                else:
+                    db.add(models.StoreListing(
+                        store              = store,
+                        store_product_name = item.name,
+                        search_query       = search_q,
+                        price              = price,
+                        price_per_kg       = item.per_kg_price,
+                        unit_label         = item.unit_type,
+                        in_stock           = True,
+                    ))
+                updated += 1
+            db.commit()
+            if updated:
+                logger.info(f"Upserted {updated} store listings from receipt #{receipt_id} ({receipt.store_name})")
     except Exception as e:
-        logger.error(f"Normalization failed for receipt #{receipt_id}: {e}")
+        logger.error(f"Post-receipt processing failed for #{receipt_id}: {e}")
     finally:
         db.close()
 
