@@ -165,18 +165,6 @@
     .store-pill[data-store="spar"].active     { background: var(--spar); }
     .store-pill[data-store="uitkyk"].active   { background: var(--uitkyk); }
 
-    /* ── Upload Uitkyk CSV ── */
-    .uitkyk-section { padding: 0 24px 20px; }
-    .uitkyk-row { display: flex; align-items: center; gap: 10px; }
-    #uitkyk-file { display: none; }
-    .uitkyk-btn {
-      padding: 6px 14px; background: transparent; border: 1px solid var(--border2);
-      color: var(--text-muted); font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
-      cursor: pointer; border-radius: 2px; transition: all .15s;
-    }
-    .uitkyk-btn:hover { border-color: var(--uitkyk); color: var(--uitkyk); }
-    .uitkyk-msg { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
-
     /* ── Results ── */
     .results-section { padding: 0 24px 40px; }
     .results-meta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-bottom: 14px; }
@@ -403,13 +391,6 @@
   <button class="store-pill" data-store="uitkyk"     onclick="setFilter('uitkyk', this)">Uitkyk</button>
 </div>
 
-<div class="uitkyk-section">
-  <div class="uitkyk-row">
-    <button class="uitkyk-btn" onclick="document.getElementById('uitkyk-file').click()">⬆ Import Uitkyk CSV</button>
-    <input type="file" id="uitkyk-file" accept=".csv" onchange="importUitkyk(this)">
-    <span class="uitkyk-msg" id="uitkyk-msg"></span>
-  </div>
-</div>
 
 <div class="results-section">
   <div id="results-container">
@@ -729,23 +710,6 @@ function renderResults() {
   container.innerHTML = html;
 }
 
-// ── Uitkyk CSV import ──────────────────────────────────────────────────────────
-async function importUitkyk(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const msg = document.getElementById('uitkyk-msg');
-  msg.textContent = 'Importing…';
-  const fd = new FormData();
-  fd.append('file', file);
-  try {
-    const d = await fetch('/prices/uitkyk/import', { method: 'POST', body: fd }).then(r => r.json());
-    msg.textContent = `✓ Imported ${d.imported} items from Uitkyk`;
-    if (currentQuery) doSearch();
-  } catch(e) {
-    msg.textContent = 'Error: ' + e.message;
-  }
-  input.value = '';
-}
 
 // ── Util ───────────────────────────────────────────────────────────────────────
 function esc(s)  { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

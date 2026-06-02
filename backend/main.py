@@ -1239,33 +1239,6 @@ def admin_backfill_kg_price(
     return {"updated": updated}
 
 
-@app.post("/prices/uitkyk/import")
-async def import_uitkyk(
-    file: UploadFile = File(...),
-    user: models.User = Depends(auth.require_permission("prices")),
-    db: Session = Depends(database.get_db),
-):
-    """Import a Uitkyk CSV file to populate store_listings."""
-    from scrapers.uitkyk import parse_csv
-
-    content = (await file.read()).decode("utf-8", errors="replace")
-    results = parse_csv(content)
-
-    saved = 0
-    for r in results:
-        db.add(models.StoreListing(
-            store=r.store,
-            store_product_name=r.name,
-            search_query=r.name.lower(),
-            price=r.price,
-            price_per_kg=r.per_kg_price,
-            unit_label=r.unit,
-            in_stock=True,
-        ))
-        saved += 1
-    db.commit()
-    return {"imported": saved, "store": "uitkyk"}
-
 
 def _bg_scrape(query: str):
     """Background task: run scrape in a new event loop."""
