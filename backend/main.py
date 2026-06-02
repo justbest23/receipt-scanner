@@ -1999,6 +1999,7 @@ def analytics_items(
     ).all()
 
     history = base.with_entities(
+        models.Receipt.id.label("receipt_id"),
         models.Receipt.receipt_date,
         models.Receipt.store_name,
         models.ReceiptItem.name,
@@ -2027,6 +2028,7 @@ def analytics_items(
         ],
         "history": [
             {
+                "receipt_id":  row.receipt_id,
                 "date":        row.receipt_date,
                 "store":       row.store_name or "Unknown",
                 "name":        row.name,

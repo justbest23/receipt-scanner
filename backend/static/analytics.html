@@ -483,7 +483,7 @@ function renderHistory() {
   el.innerHTML = data.length === 0
     ? '<div class="empty" style="padding:24px">No history</div>'
     : `<div class="surface-box"><table class="data-table"><thead><tr>
-        ${th('date','Date')}${th('store','Store')}${th('name','Item')}${th('qty','Qty')}${th('unit','Unit Price')}${th('total','Total')}
+        ${th('date','Date')}${th('store','Store')}${th('name','Item')}${th('qty','Qty')}${th('unit','Unit Price')}${th('total','Total')}<th></th>
        </tr></thead><tbody>` +
       data.map(h =>
         `<tr>
@@ -493,6 +493,7 @@ function renderHistory() {
           <td class="mono-val">${h.quantity??1}</td>
           <td class="mono-val">${h.unit_price!=null?'R '+fmt(h.unit_price):'—'}</td>
           <td class="mono-val">${h.total_price!=null?'R '+fmt(h.total_price):'—'}</td>
+          <td>${h.receipt_id ? `<a href="/history#${h.receipt_id}" target="_blank" style="font-family:var(--mono);font-size:9px;color:var(--text-muted);text-decoration:none;padding:2px 6px;border:1px solid var(--border2);border-radius:2px;white-space:nowrap;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='';this.style.borderColor=''">receipt #${h.receipt_id} ↗</a>` : ''}</td>
         </tr>`).join('') +
       `</tbody></table></div>`;
 }
