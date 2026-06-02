@@ -402,6 +402,7 @@ function renderCanonicalCell(item) {
   return `<a href="/settings#corrections" class="canonical-badge" onclick="event.stopPropagation()" title="Edit ingredient names in Settings">
     ${esc(c) || '<em style=&quot;opacity:.5&quot;>—</em>'}
   </a>`;
+}
 
 function sortHistory(col) {
   if (sortCol === col) { sortDir *= -1; } else { sortCol = col; sortDir = 1; }

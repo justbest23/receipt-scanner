@@ -657,6 +657,10 @@ function itemRowHtml(item, idx) {
           <input type="text" data-field="name" value="${esc(name)}">
           ${item.receipt_name ? `<span class="receipt-ref">Original: ${esc(item.receipt_name)}</span>` : ''}
         </div>
+        <div class="field full">
+          <label>Ingredient Name <span style="opacity:.5;font-size:8px">(normalised — used for grouping in Insights)</span></label>
+          <input type="text" data-field="canonical_name" value="${esc(item.canonical_name||'')}" placeholder="e.g. Milk, Chicken Breast…">
+        </div>
         <div class="field">
           <label>Category</label>
           <input type="text" list="cat-datalist" data-field="category" value="${esc(item.category||'other')}">
@@ -769,6 +773,7 @@ async function saveReceipt(id) {
     items.push({
       receipt_name:   row.dataset.receiptName || null,
       name:           get('name'),
+      canonical_name: get('canonical_name') || null,
       category:       get('category'),
       quantity:       parseFloat(get('quantity')) || 1,
       unit_type:      get('unit_type'),

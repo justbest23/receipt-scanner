@@ -941,13 +941,27 @@ def update_receipt(
             db.delete(item)
         db.flush()
         for d in payload["items"]:
-            wkg = d.get("weight_kg") or None
-            tp  = d.get("total_price")
-            per_kg = d.get("per_kg_price") or (round(tp / wkg, 2) if wkg and tp and wkg > 0 else None)
+            wkg      = d.get("weight_kg") or None
+            tp       = d.get("total_price")
+            per_kg   = d.get("per_kg_price") or (round(tp / wkg, 2) if wkg and tp and wkg > 0 else None)
+            raw_name = d.get("name") or d.get("display_name") or "Unknown"
+            canonical = (d.get("canonical_name") or "").strip() or None
+
+            # Persist user-provided canonical as a correction so the AI learns it
+            if canonical:
+                existing = db.query(models.NormalizationCorrection).filter(
+                    models.NormalizationCorrection.raw_name == raw_name
+                ).first()
+                if existing:
+                    existing.canonical = canonical
+                else:
+                    db.add(models.NormalizationCorrection(raw_name=raw_name, canonical=canonical))
+
             db.add(models.ReceiptItem(
                 receipt_id     = r.id,
                 receipt_name   = d.get("receipt_name") or None,
-                name           = d.get("name") or d.get("display_name") or "Unknown",
+                name           = raw_name,
+                canonical_name = canonical,
                 category       = d.get("category") or None,
                 quantity       = float(d.get("quantity") or 1),
                 unit_type      = d.get("unit_type") or "unit",
@@ -2578,9 +2592,12 @@ def _normalize_receipt_items(receipt_id: int):
         if not items:
             return
         corrections = _load_corrections(db)
-        names = [i.name for i in items]
+        to_normalize = [i for i in items if not i.canonical_name]
+        if not to_normalize:
+            return
+        names = [i.name for i in to_normalize]
         mapping = normalize_names(names, corrections=corrections)
-        for item in items:
+        for item in to_normalize:
             item.canonical_name = mapping.get(item.name) or item.name
         db.commit()
         logger.info(f"Normalized {len(items)} items for receipt #{receipt_id}")
