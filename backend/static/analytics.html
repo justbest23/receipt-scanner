@@ -406,7 +406,7 @@ function renderTopItems() {
         ${byName ? `<td id="canedit-${esc(item.name)}">${renderCanonicalCell(item)}</td>` : ''}
         <td class="mono-val" style="text-align:right">${item.count}×</td>
         <td class="mono-val" style="text-align:right">${item.total_qty != null ? fmtQty(item.total_qty) : '—'}</td>
-        <td class="mono-val" style="text-align:right">${item.avg_price ? 'R ' + fmt(item.avg_price) : '—'}</td>
+        <td class="mono-val" style="text-align:right">${fmtAvgPrice(item)}</td>
         <td class="mono-val" style="text-align:right">${item.total ? 'R ' + fmt(item.total) : '—'}</td>
       </tr>`).join('')}
     </tbody></table></div>`;
@@ -483,15 +483,15 @@ function renderHistory() {
   el.innerHTML = data.length === 0
     ? '<div class="empty" style="padding:24px">No history</div>'
     : `<div class="surface-box"><table class="data-table"><thead><tr>
-        ${th('date','Date')}${th('store','Store')}${th('name','Item')}${th('qty','Qty')}${th('unit','Unit Price')}${th('total','Total')}<th></th>
+        ${th('date','Date')}${th('store','Store')}${th('name','Item')}${th('qty','Qty')}${th('unit','Price')}${th('total','Total')}<th></th>
        </tr></thead><tbody>` +
       data.map(h =>
         `<tr>
           <td class="mono-val">${h.date||'—'}</td>
           <td>${esc(h.store)}</td>
           <td style="color:var(--text-dim);font-size:12px;cursor:pointer;" onclick="drillItem('${esc(h.name)}')" title="Search for ${esc(h.name)}">${esc(h.name)}</td>
-          <td class="mono-val">${h.quantity??1}</td>
-          <td class="mono-val">${h.unit_price!=null?'R '+fmt(h.unit_price):'—'}</td>
+          <td class="mono-val">${fmtQtyWeight(h)}</td>
+          <td class="mono-val">${fmtPrice(h)}</td>
           <td class="mono-val">${h.total_price!=null?'R '+fmt(h.total_price):'—'}</td>
           <td>${h.receipt_id ? `<a href="/history#${h.receipt_id}" target="_blank" style="font-family:var(--mono);font-size:9px;color:var(--text-muted);text-decoration:none;padding:2px 6px;border:1px solid var(--border2);border-radius:2px;white-space:nowrap;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='';this.style.borderColor=''">receipt #${h.receipt_id} ↗</a>` : ''}</td>
         </tr>`).join('') +
@@ -736,6 +736,29 @@ function renderSummary(d) {
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function fmt(v)    { return v == null ? '—' : Number(v).toFixed(2); }
 function fmtQty(v) { const n = Number(v); return Number.isInteger(n) ? String(n) : n.toFixed(2); }
+
+function isWeightItem(h) { return h.unit_type === 'weight_kg' || h.unit_type === 'weight_g' || (h.per_kg_price != null && h.unit_price == null); }
+
+function fmtQtyWeight(h) {
+  if (h.weight_kg != null) return h.weight_kg.toFixed(3) + ' kg';
+  return fmtQty(h.quantity ?? 1);
+}
+
+function fmtPrice(h) {
+  if (isWeightItem(h) || (h.per_kg_price != null && h.unit_price == null)) {
+    return h.per_kg_price != null ? `R ${fmt(h.per_kg_price)}<span style="color:var(--text-muted);font-size:9px">/kg</span>` : '—';
+  }
+  return h.unit_price != null ? 'R ' + fmt(h.unit_price) : '—';
+}
+
+function fmtAvgPrice(item) {
+  if (item.avg_kg_price != null && item.avg_price == null) {
+    return `R ${fmt(item.avg_kg_price)}<span style="color:var(--text-muted);font-size:9px">/kg</span>`;
+  }
+  if (item.avg_price != null) return 'R ' + fmt(item.avg_price);
+  if (item.avg_kg_price != null) return `R ${fmt(item.avg_kg_price)}<span style="color:var(--text-muted);font-size:9px">/kg</span>`;
+  return '—';
+}
 function pct(v, m) { return Math.round(Math.min(100, (v / m) * 100)); }
 function esc(s)    { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 

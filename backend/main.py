@@ -1200,6 +1200,31 @@ def admin_normalize_items(
     return {"normalized": len(items), "unique_names": len(unique_names)}
 
 
+@app.post("/admin/backfill-kg-price")
+def admin_backfill_kg_price(
+    admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(database.get_db),
+):
+    """Calculate per_kg_price for weight-based items that are missing it."""
+    items = (
+        db.query(models.ReceiptItem)
+        .filter(
+            models.ReceiptItem.per_kg_price.is_(None),
+            models.ReceiptItem.weight_kg.isnot(None),
+            models.ReceiptItem.total_price.isnot(None),
+            models.ReceiptItem.weight_kg > 0,
+        )
+        .all()
+    )
+    updated = 0
+    for item in items:
+        item.per_kg_price = round(item.total_price / item.weight_kg, 2)
+        updated += 1
+    db.commit()
+    logger.info(f"Backfilled per_kg_price for {updated} items")
+    return {"updated": updated}
+
+
 @app.post("/prices/uitkyk/import")
 async def import_uitkyk(
     file: UploadFile = File(...),
@@ -2004,7 +2029,10 @@ def analytics_items(
         models.Receipt.store_name,
         models.ReceiptItem.name,
         models.ReceiptItem.quantity,
+        models.ReceiptItem.unit_type,
+        models.ReceiptItem.weight_kg,
         models.ReceiptItem.unit_price,
+        models.ReceiptItem.per_kg_price,
         models.ReceiptItem.total_price,
     ).order_by(models.Receipt.receipt_date.desc()).limit(200).all()
 
@@ -2033,7 +2061,10 @@ def analytics_items(
                 "store":       row.store_name or "Unknown",
                 "name":        row.name,
                 "quantity":    row.quantity,
+                "unit_type":   row.unit_type,
+                "weight_kg":   row.weight_kg,
                 "unit_price":  row.unit_price,
+                "per_kg_price": row.per_kg_price,
                 "total_price": row.total_price,
             }
             for row in history
@@ -2092,6 +2123,7 @@ def analytics_summary(
         func.sum(models.ReceiptItem.quantity).label("total_qty"),
         func.sum(models.ReceiptItem.total_price).label("total"),
         func.avg(models.ReceiptItem.unit_price).label("avg_price"),
+        func.avg(models.ReceiptItem.per_kg_price).label("avg_kg_price"),
     ).group_by(models.ReceiptItem.name, models.ReceiptItem.canonical_name).order_by(desc(func.count())).limit(50).all()
 
     by_canonical = item_q.filter(
@@ -2102,6 +2134,7 @@ def analytics_summary(
         func.sum(models.ReceiptItem.quantity).label("total_qty"),
         func.sum(models.ReceiptItem.total_price).label("total"),
         func.avg(models.ReceiptItem.unit_price).label("avg_price"),
+        func.avg(models.ReceiptItem.per_kg_price).label("avg_kg_price"),
     ).group_by(models.ReceiptItem.canonical_name).order_by(desc(func.count())).limit(50).all()
 
     return {
@@ -2118,11 +2151,11 @@ def analytics_summary(
             for r in by_store
         ],
         "top_items": [
-            {"name": r.name, "canonical": r.canonical_name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
+            {"name": r.name, "canonical": r.canonical_name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price), 2) if r.avg_price else None, "avg_kg_price": round(float(r.avg_kg_price), 2) if r.avg_kg_price else None}
             for r in top_items
         ],
         "by_canonical": [
-            {"name": r.canonical_name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
+            {"name": r.canonical_name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price), 2) if r.avg_price else None, "avg_kg_price": round(float(r.avg_kg_price), 2) if r.avg_kg_price else None}
             for r in by_canonical
         ],
     }
