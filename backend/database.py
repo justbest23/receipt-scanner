@@ -149,7 +149,9 @@ def save_receipt(db, payload: dict, image_path: str | None = None, user_id: int 
     db.flush()
 
     for item_data in ext.get("items", []):
+        import re as _re
         display = item_data.get("display_name") or item_data.get("name") or "Unknown"
+        display = _re.sub(r'^\*+\s*', '', display).strip()  # strip store prefix markers e.g. *** on Uitkyk receipts
 
         # Calculate per_kg_price if not provided but weight_kg and total_price are known
         per_kg = item_data.get("per_kg_price")
