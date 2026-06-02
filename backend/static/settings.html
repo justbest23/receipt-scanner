@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basket · Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script>
+    (function() {
+      var t = localStorage.getItem('basket-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root, [data-theme="dark"] {
+      --bg: #0d0f11; --surface: #141618; --surface2: #1c1f22; --surface3: #22262b;
+      --border: #2a2d32; --border2: #3d4249;
+      --text: #e2e4e7; --text-dim: #9ca3af; --text-muted: #6b7280;
+      --accent: #f97316; --green: #22c55e; --red: #ef4444; --teal: #2dd4bf;
+      --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
+    }
+    [data-theme="light"] {
+      --bg: #f3f4f6; --surface: #ffffff; --surface2: #f0f2f4; --surface3: #e5e7eb;
+      --border: #d1d5db; --border2: #bbc0c8;
+      --text: #111827; --text-dim: #374151; --text-muted: #6b7280;
+      --accent: #c2550d; --green: #15803d; --red: #b91c1c; --teal: #0f766e;
+      --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
+    }
+    [data-theme="hc"] {
+      --bg: #000; --surface: #0a0a0a; --surface2: #141414; --surface3: #1e1e1e;
+      --border: #6b6b6b; --border2: #999;
+      --text: #fff; --text-dim: #e0e0e0; --text-muted: #b0b0b0;
+      --accent: #ffaa00; --green: #00e676; --red: #ff5252; --teal: #64ffda;
+      --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
+    }
+
+    html, body { background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    header {
+      display: flex; align-items: center;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+      height: 52px; padding: 0 24px; gap: 0;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; margin-right: 28px; text-decoration: none; color: var(--text); }
+    .logo-mark { width: 26px; height: 26px; border: 1.5px solid var(--accent); display: grid; place-items: center; }
+    .logo-mark svg { width: 13px; height: 13px; fill: var(--accent); }
+    nav { display: flex; gap: 2px; }
+    .nav-link { padding: 6px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: var(--text-dim); border-radius: 2px; transition: color .15s, background .15s; }
+    .nav-link:hover { color: var(--text); }
+    .nav-link.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+    .theme-toggle { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border2); border-radius: 3px; overflow: hidden; margin-left: 10px; flex-shrink: 0; }
+    .theme-btn { padding: 5px 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .05em; background: transparent; border: none; color: var(--text-muted); cursor: pointer; transition: background .15s, color .15s; line-height: 1; }
+    .theme-btn.active { background: var(--accent); color: #fff; }
+    .theme-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
+
+    .main { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; }
+
+    .page-title { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--text); margin-bottom: 32px; }
+
+    .settings-section { margin-bottom: 40px; }
+    .section-head {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 20px 24px; }
+
+    /* ── Form fields ── */
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    @media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field-full { margin-bottom: 14px; }
+    .field label, .field-full label {
+      font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+    }
+    .field input, .field-full input, .field select {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; color: var(--text); font-family: var(--mono);
+      font-size: 12px; padding: 8px 10px; outline: none; transition: border-color .15s;
+    }
+    .field input:focus, .field-full input:focus, .field select:focus { border-color: var(--accent); }
+    .divider { border-top: 1px solid var(--border); margin: 18px 0 16px; padding-top: 14px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .btn-save { padding: 9px 22px; background: var(--accent); color: #000; border: none; border-radius: 3px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: opacity .15s; }
+    .btn-save:hover { opacity: .88; }
+    .btn-save:disabled { opacity: .5; cursor: default; }
+    .msg { font-family: var(--mono); font-size: 11px; padding: 6px 10px; border-radius: 3px; display: none; margin-left: 10px; }
+    .msg.ok  { display: inline; background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green); }
+    .msg.err { display: inline; background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+
+    /* ── Corrections table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: normal; }
+    .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--surface2); }
+    .mono-val { font-family: var(--mono); font-size: 12px; }
+    .empty-msg { padding: 32px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+    .edit-btn { padding: 3px 8px; font-family: var(--mono); font-size: 9px; background: transparent; border: 1px solid var(--border2); color: var(--text-dim); border-radius: 2px; cursor: pointer; transition: border-color .12s, color .12s; }
+    .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .del-btn  { padding: 3px 8px; font-family: var(--mono); font-size: 9px; background: transparent; border: 1px solid var(--border2); color: var(--text-muted); border-radius: 2px; cursor: pointer; transition: border-color .12s, color .12s; margin-left: 4px; }
+    .del-btn:hover  { border-color: var(--red); color: var(--red); }
+    .inline-input { font-family: var(--mono); font-size: 11px; padding: 3px 7px; background: var(--surface2); border: 1px solid var(--accent); border-radius: 2px; color: var(--text); outline: none; width: 180px; }
+    .save-btn { padding: 3px 8px; font-family: var(--mono); font-size: 9px; background: var(--accent); color: #000; border: none; border-radius: 2px; cursor: pointer; margin-left: 4px; }
+    .cancel-btn { padding: 3px 8px; font-family: var(--mono); font-size: 9px; background: transparent; border: 1px solid var(--border2); color: var(--text-muted); border-radius: 2px; cursor: pointer; margin-left: 2px; }
+  </style>
+  <link rel="stylesheet" href="/static/mobile.css">
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">
+    <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2zm6 0h6v6h-2V5.414l-5.293 5.293-1.414-1.414L12.586 4H8V2z"/></svg></div>
+    <span>BASKET</span>
+  </a>
+  <nav>
+    <a class="nav-link" href="/">Receipts</a>
+    <a class="nav-link" href="/history">History</a>
+    <a class="nav-link" href="/prices">Prices <span style="font-size:8px;opacity:.6">(WIP)</span></a>
+    <a class="nav-link" href="/meals">Meal Plan</a>
+    <a class="nav-link" href="/analytics">Insights</a>
+    <a class="nav-link" href="/household">Household</a>
+    <a class="nav-link" href="/spend-groups">Spend</a>
+    <a class="nav-link active" href="/settings">Settings</a>
+  </nav>
+  <div id="user-nav" style="display:flex;align-items:center;margin-left:auto;flex-shrink:0;"></div>
+  <div class="theme-toggle">
+    <button class="theme-btn" data-t="dark"  onclick="setTheme('dark')">DARK</button>
+    <button class="theme-btn" data-t="light" onclick="setTheme('light')">LIGHT</button>
+    <button class="theme-btn" data-t="hc"    onclick="setTheme('hc')">HC</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="page-title">Settings</div>
+
+  <!-- ── Account ── -->
+  <div class="settings-section" id="account">
+    <div class="section-head">Account</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Display Name</label><input type="text" id="f-display" autocomplete="name"></div>
+        <div class="field"><label>Username</label><input type="text" id="f-username" autocomplete="username"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Email</label><input type="email" id="f-email" autocomplete="email"></div>
+        <div class="field"><label>Currency</label>
+          <select id="f-currency">
+            <option>ZAR</option><option>USD</option><option>EUR</option><option>GBP</option>
+            <option>AUD</option><option>CAD</option><option>NZD</option><option>CHF</option>
+            <option>JPY</option><option>CNY</option><option>INR</option><option>BRL</option>
+            <option>MXN</option><option>SEK</option><option>NOK</option><option>DKK</option>
+            <option>SGD</option><option>HKD</option><option>KES</option><option>NGN</option>
+            <option>GHS</option><option>EGP</option><option>MAD</option><option>TZS</option>
+            <option>UGX</option><option>ZMW</option><option>BWP</option><option>NAD</option>
+          </select>
+        </div>
+      </div>
+      <div class="divider">Change Password</div>
+      <div class="field-row">
+        <div class="field"><label>New Password <span style="opacity:.5">(leave blank to keep)</span></label><input type="password" id="f-pw1" autocomplete="new-password" placeholder="min 8 characters"></div>
+        <div class="field"><label>Confirm Password</label><input type="password" id="f-pw2" autocomplete="new-password" placeholder="repeat new password"></div>
+      </div>
+      <div style="display:flex;align-items:center;margin-top:6px">
+        <button class="btn-save" id="acct-save-btn" onclick="saveAccount()">Save Changes</button>
+        <span class="msg" id="acct-msg"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Ingredient Names ── -->
+  <div class="settings-section" id="corrections">
+    <div class="section-head">Ingredient Names <span style="color:var(--text-muted);font-size:9px;margin-left:6px">corrections to AI normalization</span></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="corrections-wrap"><div class="empty-msg">Loading…</div></div>
+    </div>
+    <p style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--text-muted);line-height:1.7">
+      These corrections override the AI when it normalises product names to generic ingredient names.<br>
+      They are also injected into future AI prompts as examples so similar products are handled correctly.
+    </p>
+  </div>
+</div>
+
+<script>
+const ge = id => document.getElementById(id);
+
+// ── Account ───────────────────────────────────────────────────────────────────
+async function loadAccount() {
+  try {
+    const u = await fetch('/auth/me').then(r => r.json());
+    ge('f-display').value  = u.display_name || '';
+    ge('f-username').value = u.username || '';
+    ge('f-email').value    = u.email || '';
+    ge('f-currency').value = u.currency || 'ZAR';
+  } catch(e) { console.error('Failed to load account', e); }
+}
+
+async function saveAccount() {
+  const pw1 = ge('f-pw1').value;
+  const pw2 = ge('f-pw2').value;
+  const msg = ge('acct-msg');
+  const btn = ge('acct-save-btn');
+  msg.className = 'msg'; msg.style.display = 'none';
+
+  if (pw1 && pw1 !== pw2) {
+    msg.className = 'msg err'; msg.textContent = 'Passwords do not match.'; msg.style.display = ''; return;
+  }
+  const body = {
+    display_name: ge('f-display').value.trim(),
+    username:     ge('f-username').value.trim(),
+    email:        ge('f-email').value.trim(),
+    currency:     ge('f-currency').value,
+  };
+  if (pw1) body.password = pw1;
+
+  btn.disabled = true;
+  try {
+    const res  = await fetch('/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      msg.className = 'msg ok'; msg.textContent = 'Saved!'; msg.style.display = '';
+      ge('f-pw1').value = ''; ge('f-pw2').value = '';
+      if (window.__authUser) window.__authUser = { ...window.__authUser, ...data };
+      const nb = document.getElementById('user-nav-btn');
+      if (nb) nb.textContent = data.display_name || data.username;
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    } else {
+      msg.className = 'msg err'; msg.textContent = data.detail || 'Save failed.'; msg.style.display = '';
+    }
+  } catch(e) {
+    msg.className = 'msg err'; msg.textContent = 'Network error.'; msg.style.display = '';
+  } finally { btn.disabled = false; }
+}
+
+// ── Corrections ───────────────────────────────────────────────────────────────
+let corrections = [];
+
+async function loadCorrections() {
+  try {
+    corrections = await fetch('/analytics/corrections').then(r => r.json());
+    renderCorrections();
+  } catch(e) {
+    ge('corrections-wrap').innerHTML = '<div class="empty-msg">Failed to load.</div>';
+  }
+}
+
+function renderCorrections() {
+  const wrap = ge('corrections-wrap');
+  if (!corrections.length) {
+    wrap.innerHTML = '<div class="empty-msg">No corrections yet — use the Insights page to see ingredient names, then come back here to fix any that are wrong.</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr>
+      <th>Product Name (from receipt)</th>
+      <th>Ingredient Name</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="corrections-body"></tbody>
+  </table>`;
+  renderCorrectionRows();
+}
+
+function renderCorrectionRows() {
+  const tbody = ge('corrections-body');
+  if (!tbody) return;
+  tbody.innerHTML = corrections.map((c, i) => `
+    <tr id="crow-${i}">
+      <td class="mono-val" style="color:var(--text-dim);font-size:11px">${esc(c.raw_name)}</td>
+      <td id="cval-${i}" class="mono-val">${esc(c.canonical)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="edit-btn" onclick="editCorrection(${i})">Edit</button>
+        <button class="del-btn"  onclick="deleteCorrection(${i})">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function editCorrection(i) {
+  const c = corrections[i];
+  const valCell = ge('cval-' + i);
+  const row = ge('crow-' + i);
+  const lastCell = row.cells[2];
+  valCell.innerHTML = `<input class="inline-input" id="ci-${i}" value="${esc(c.canonical)}">`;
+  lastCell.innerHTML = `
+    <button class="save-btn"   onclick="saveCorrection(${i})">Save</button>
+    <button class="cancel-btn" onclick="renderCorrectionRows()">✕</button>`;
+  const inp = ge('ci-' + i);
+  inp.focus(); inp.select();
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveCorrection(i);
+    if (e.key === 'Escape') renderCorrectionRows();
+  });
+}
+
+async function saveCorrection(i) {
+  const inp = ge('ci-' + i);
+  if (!inp) return;
+  const canonical = inp.value.trim();
+  if (!canonical) return;
+  try {
+    const r = await fetch('/analytics/corrections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw_name: corrections[i].raw_name, canonical }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Save failed');
+    corrections[i] = { ...corrections[i], canonical };
+    renderCorrectionRows();
+  } catch(e) { alert('Could not save: ' + e.message); }
+}
+
+async function deleteCorrection(i) {
+  const c = corrections[i];
+  if (!confirm(`Remove correction for "${c.raw_name}"?\n\nExisting items will keep their current ingredient name but it won't be protected from future AI changes.`)) return;
+  try {
+    const r = await fetch('/analytics/corrections/' + encodeURIComponent(c.raw_name), { method: 'DELETE' });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Delete failed');
+    corrections.splice(i, 1);
+    renderCorrections();
+  } catch(e) { alert('Could not delete: ' + e.message); }
+}
+
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Scroll to section from hash ───────────────────────────────────────────────
+function scrollToHash() {
+  const id = location.hash.slice(1);
+  if (id) { const el = document.getElementById(id); if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200); }
+}
+
+loadAccount();
+loadCorrections();
+scrollToHash();
+</script>
+<script src="/static/auth.js"></script>
+<script>
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('basket-theme', t);
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  }
+  (function() {
+    var t = document.documentElement.getAttribute('data-theme') || 'dark';
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  })();
+</script>
+</body>
+</html>

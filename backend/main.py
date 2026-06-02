@@ -2203,9 +2203,30 @@ def list_corrections(
     return [{"raw_name": r.raw_name, "canonical": r.canonical} for r in rows]
 
 
+@app.delete("/analytics/corrections/{raw_name:path}")
+def delete_correction(
+    raw_name: str,
+    user: models.User = Depends(auth.require_permission("scan")),
+    db: Session = Depends(database.get_db),
+):
+    row = db.query(models.NormalizationCorrection).filter(
+        models.NormalizationCorrection.raw_name == raw_name
+    ).first()
+    if not row:
+        raise HTTPException(404, "Correction not found")
+    db.delete(row)
+    db.commit()
+    return {"deleted": raw_name}
+
+
 @app.get("/analytics", response_class=HTMLResponse, include_in_schema=False)
 def analytics_page(request: Request, db: Session = Depends(database.get_db)):
     return _html(request, db, "analytics.html")
+
+
+@app.get("/settings", response_class=HTMLResponse, include_in_schema=False)
+def settings_page(request: Request, db: Session = Depends(database.get_db)):
+    return _html(request, db, "settings.html")
 
 
 @app.get("/household", response_class=HTMLResponse, include_in_schema=False)

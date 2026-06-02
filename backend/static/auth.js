@@ -241,12 +241,10 @@
 
       const userBtn = document.createElement('button');
       userBtn.id = 'user-nav-btn';
-      userBtn.title = 'Edit profile';
+      userBtn.title = 'Account settings';
       userBtn.textContent = user.display_name || user.username;
-      userBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (!document.getElementById('profile-overlay')) injectModal();
-        window.__pmOpen(window.__authUser);
+      userBtn.addEventListener('click', function() {
+        window.location.href = '/settings';
       });
 
       const logoutBtn = document.createElement('button');

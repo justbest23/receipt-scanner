@@ -200,23 +200,7 @@
       transition: background .12s;
     }
     .canonical-badge:hover { background: color-mix(in srgb, var(--teal) 22%, transparent); }
-    .canonical-edit-wrap { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
-    .canonical-input {
-      font-family: var(--mono); font-size: 10px; padding: 2px 6px;
-      background: var(--surface2); border: 1px solid var(--accent);
-      border-radius: 3px; color: var(--text); outline: none; width: 130px;
-    }
-    .canonical-save-btn {
-      font-family: var(--mono); font-size: 9px; padding: 2px 7px;
-      background: var(--accent); color: #000; border: none; border-radius: 3px;
-      cursor: pointer; white-space: nowrap;
-    }
-    .canonical-cancel-btn {
-      font-family: var(--mono); font-size: 9px; padding: 2px 7px;
-      background: transparent; color: var(--text-muted); border: 1px solid var(--border2);
-      border-radius: 3px; cursor: pointer;
-    }
-    .view-toggle {
+.view-toggle {
       display: inline-flex; background: var(--surface2); border: 1px solid var(--border2);
       border-radius: 3px; overflow: hidden; margin-left: 8px;
     }
@@ -295,6 +279,7 @@
     <a class="nav-link active" href="/analytics">Insights</a>
     <a class="nav-link" href="/household">Household</a>
     <a class="nav-link" href="/spend-groups">Spend</a>
+    <a class="nav-link" href="/settings">Settings</a>
   </nav>
   <div id="user-nav" style="display:flex;align-items:center;margin-left:auto;flex-shrink:0;"></div>
   <div class="theme-toggle">
@@ -414,48 +399,9 @@ function renderTopItems() {
 
 function renderCanonicalCell(item) {
   const c = item.canonical || '';
-  return `<span class="canonical-badge" onclick="event.stopPropagation();editCanonical('${esc(item.name)}','${esc(c)}')" title="Click to correct">
-    ${esc(c) || '<em style=&quot;opacity:.5&quot;>—</em>'} ✎
-  </span>`;
-}
-
-function editCanonical(rawName, current) {
-  const cellId = 'canedit-' + rawName;
-  const cell = document.getElementById(cellId);
-  if (!cell) return;
-  cell.innerHTML = `
-    <div class="canonical-edit-wrap">
-      <input class="canonical-input" id="ci-${esc(rawName)}" value="${esc(current)}" placeholder="ingredient name">
-      <button class="canonical-save-btn" onclick="saveCanonical('${esc(rawName)}')">Save</button>
-      <button class="canonical-cancel-btn" onclick="renderTopItems()">✕</button>
-    </div>`;
-  const inp = document.getElementById('ci-' + rawName);
-  inp.focus(); inp.select();
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') saveCanonical(rawName);
-    if (e.key === 'Escape') renderTopItems();
-  });
-}
-
-async function saveCanonical(rawName) {
-  const inp = document.getElementById('ci-' + rawName);
-  if (!inp) return;
-  const canonical = inp.value.trim();
-  if (!canonical) return;
-  try {
-    const r = await fetch('/analytics/corrections', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raw_name: rawName, canonical }),
-    });
-    if (!r.ok) throw new Error((await r.json()).detail || 'Save failed');
-    // Update local data so re-render shows the new value without a full reload
-    topItemsData = topItemsData.map(i => i.name === rawName ? { ...i, canonical } : i);
-    renderTopItems();
-  } catch (e) {
-    alert('Could not save: ' + e.message);
-  }
-}
+  return `<a href="/settings#corrections" class="canonical-badge" onclick="event.stopPropagation()" title="Edit ingredient names in Settings">
+    ${esc(c) || '<em style=&quot;opacity:.5&quot;>—</em>'}
+  </a>`;
 
 function sortHistory(col) {
   if (sortCol === col) { sortDir *= -1; } else { sortCol = col; sortDir = 1; }
