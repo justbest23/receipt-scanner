@@ -114,16 +114,30 @@ def save_receipt(db, payload: dict, image_path: str | None = None, user_id: int 
             ext = _json.loads(ext)
         except (_json.JSONDecodeError, TypeError):
             ext = {}
-    store = ext.get("store", {})
-    date  = ext.get("date",  {})
+    store_raw = ext.get("store", {})
+    date_raw  = ext.get("date",  {})
+
+    if isinstance(store_raw, dict):
+        store_name = store_raw.get("name")
+        store_conf = store_raw.get("confidence")
+    else:
+        store_name = store_raw or None
+        store_conf = None
+
+    if isinstance(date_raw, dict):
+        receipt_date = date_raw.get("value")
+        date_conf    = date_raw.get("confidence")
+    else:
+        receipt_date = date_raw or None
+        date_conf    = None
 
     receipt = Receipt(
         user_id      = user_id,
         image_path   = image_path or payload.get("image_path"),
-        store_name   = store.get("name"),
-        store_conf   = store.get("confidence"),
-        receipt_date = date.get("value"),
-        date_conf    = date.get("confidence"),
+        store_name   = store_name,
+        store_conf   = store_conf,
+        receipt_date = receipt_date,
+        date_conf    = date_conf,
         vendor       = payload.get("vendor"),
         subtotal     = ext.get("subtotal"),
         vat_total    = ext.get("vat_total"),
