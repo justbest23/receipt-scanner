@@ -22,4 +22,8 @@ backend/uploads/
 *.jpg
 *.png
 *.csv
+
+# App icons are not test data — keep them
+!BasketApp/android/app/src/main/res/mipmap-*/ic_launcher.png
+!BasketApp/android/app/src/main/res/mipmap-*/ic_launcher_round.png
 backend/static/basket.apk
