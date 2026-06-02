@@ -29,7 +29,7 @@ Rules:
 "Sunflower Oil" → "Sunflower Oil", "Chicken Breast Fillet" → "Chicken Breast"
 - For produce: "Rosa Tomatoes" → "Tomato", "Bulk Onions" → "Onion"
 - For prepared/branded foods keep concise: "Lay's Chips" → "Chips"
-
+{corrections_section}
 Return ONLY a valid JSON object, no explanation, no markdown:
 {{"original name": "canonical name", ...}}
 
@@ -38,7 +38,7 @@ Product names to normalize:
 """
 
 
-def normalize_names(names: list[str]) -> dict[str, str]:
+def normalize_names(names: list[str], corrections: dict[str, str] | None = None) -> dict[str, str]:
     """Map each name in the list to a canonical ingredient name."""
     if not names:
         return {}
@@ -56,30 +56,44 @@ def normalize_names(names: list[str]) -> dict[str, str]:
 
     client = _anthropic.Anthropic(api_key=api_key)
 
-    # Deduplicate to save tokens
-    unique = list(dict.fromkeys(names))
-    names_text = "\n".join(f"- {n}" for n in unique)
+    corrections = corrections or {}
+
+    # Pre-apply known corrections — only send unknown names to the AI
+    unique_all = list(dict.fromkeys(names))
+    pre_applied = {n: corrections[n] for n in unique_all if n in corrections}
+    to_ask = [n for n in unique_all if n not in corrections]
+
+    if not to_ask:
+        return {n: corrections.get(n, n) for n in names}
+
+    names_text = "\n".join(f"- {n}" for n in to_ask)
+
+    # Inject user corrections as authoritative examples the AI must not override
+    if corrections:
+        lines = "\n".join(f'- "{k}" → "{v}"' for k, v in list(corrections.items())[:30])
+        corrections_section = f"\nUser-confirmed corrections (authoritative — match this style for similar items):\n{lines}\n"
+    else:
+        corrections_section = ""
 
     try:
         resp = client.messages.create(
             model=os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
             max_tokens=4096,
-            messages=[{"role": "user", "content": _PROMPT.format(names=names_text)}],
+            messages=[{"role": "user", "content": _PROMPT.format(names=names_text, corrections_section=corrections_section)}],
         )
         raw = resp.content[0].text.strip()
-        # Strip markdown fences robustly
         import re
         clean = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
         clean = re.sub(r'\s*```\s*$', '', clean, flags=re.MULTILINE).strip()
-        # Extract first JSON object if there's surrounding text
         m = re.search(r'\{[\s\S]*\}', clean)
         if m:
             clean = m.group(0)
         mapping: dict[str, str] = json.loads(clean)
         if not isinstance(mapping, dict):
             raise ValueError(f"Expected dict, got {type(mapping)}")
-        # Return mapping for all original names (deduped result covers duplicates)
-        return {n: mapping.get(n, n) for n in names}
+        # Merge AI results with pre-applied corrections
+        combined = {**{n: mapping.get(n, n) for n in to_ask}, **pre_applied}
+        return {n: combined.get(n, n) for n in names}
     except Exception as e:
         logger.error(f"Normalization failed: {e}")
-        return {n: n for n in names}
+        return {n: corrections.get(n, n) for n in names}

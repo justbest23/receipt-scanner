@@ -2085,11 +2085,22 @@ def analytics_summary(
 
     top_items = item_q.with_entities(
         models.ReceiptItem.name,
+        models.ReceiptItem.canonical_name,
         func.count().label("count"),
         func.sum(models.ReceiptItem.quantity).label("total_qty"),
         func.sum(models.ReceiptItem.total_price).label("total"),
         func.avg(models.ReceiptItem.unit_price).label("avg_price"),
-    ).group_by(models.ReceiptItem.name).order_by(desc(func.count())).limit(25).all()
+    ).group_by(models.ReceiptItem.name, models.ReceiptItem.canonical_name).order_by(desc(func.count())).limit(50).all()
+
+    by_canonical = item_q.filter(
+        models.ReceiptItem.canonical_name.isnot(None)
+    ).with_entities(
+        models.ReceiptItem.canonical_name,
+        func.count().label("count"),
+        func.sum(models.ReceiptItem.quantity).label("total_qty"),
+        func.sum(models.ReceiptItem.total_price).label("total"),
+        func.avg(models.ReceiptItem.unit_price).label("avg_price"),
+    ).group_by(models.ReceiptItem.canonical_name).order_by(desc(func.count())).limit(50).all()
 
     return {
         "overview": {
@@ -2105,10 +2116,56 @@ def analytics_summary(
             for r in by_store
         ],
         "top_items": [
-            {"name": r.name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
+            {"name": r.name, "canonical": r.canonical_name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
             for r in top_items
         ],
+        "by_canonical": [
+            {"name": r.canonical_name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
+            for r in by_canonical
+        ],
     }
+
+
+@app.post("/analytics/corrections")
+def save_canonical_correction(
+    payload: dict,
+    user: models.User = Depends(auth.require_permission("scan")),
+    db: Session = Depends(database.get_db),
+):
+    """Save a user correction for a canonical name and re-apply to all matching items."""
+    raw_name  = (payload.get("raw_name") or "").strip()
+    canonical = (payload.get("canonical") or "").strip()
+    if not raw_name or not canonical:
+        raise HTTPException(400, "raw_name and canonical are required")
+
+    # Upsert the correction
+    existing = db.query(models.NormalizationCorrection).filter(
+        models.NormalizationCorrection.raw_name == raw_name
+    ).first()
+    if existing:
+        existing.canonical = canonical
+    else:
+        db.add(models.NormalizationCorrection(raw_name=raw_name, canonical=canonical))
+
+    # Re-apply to all existing items with this raw name
+    updated = db.query(models.ReceiptItem).filter(
+        models.ReceiptItem.name == raw_name
+    ).update({"canonical_name": canonical})
+
+    db.commit()
+    logger.info(f"Correction saved: '{raw_name}' → '{canonical}' ({updated} items updated)")
+    return {"raw_name": raw_name, "canonical": canonical, "items_updated": updated}
+
+
+@app.get("/analytics/corrections")
+def list_corrections(
+    user: models.User = Depends(auth.require_permission("scan")),
+    db: Session = Depends(database.get_db),
+):
+    rows = db.query(models.NormalizationCorrection).order_by(
+        models.NormalizationCorrection.raw_name
+    ).all()
+    return [{"raw_name": r.raw_name, "canonical": r.canonical} for r in rows]
 
 
 @app.get("/analytics", response_class=HTMLResponse, include_in_schema=False)
@@ -2452,6 +2509,11 @@ def _ingredient_dict(i: models.RecipeIngredient) -> dict:
 
 
 # ── Serialisation ─────────────────────────────────────────────────────────────
+def _load_corrections(db) -> dict[str, str]:
+    rows = db.query(models.NormalizationCorrection).all()
+    return {r.raw_name: r.canonical for r in rows}
+
+
 def _normalize_receipt_items(receipt_id: int):
     """Background task: call Claude Haiku to fill canonical_name for all items on a receipt."""
     db = database.SessionLocal()
@@ -2459,8 +2521,9 @@ def _normalize_receipt_items(receipt_id: int):
         items = db.query(models.ReceiptItem).filter(models.ReceiptItem.receipt_id == receipt_id).all()
         if not items:
             return
+        corrections = _load_corrections(db)
         names = [i.name for i in items]
-        mapping = normalize_names(names)
+        mapping = normalize_names(names, corrections=corrections)
         for item in items:
             item.canonical_name = mapping.get(item.name) or item.name
         db.commit()

@@ -189,8 +189,43 @@
     .data-table th {
       font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
       color: var(--text-muted); padding: 6px 10px; text-align: left;
-      border-bottom: 1px solid var(--border); font-weight: normal;
+      border-bottom: 1px solid var(--border); font-weight: normal; white-space: nowrap;
     }
+    .canonical-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: var(--mono); font-size: 9px; padding: 2px 6px;
+      background: color-mix(in srgb, var(--teal) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--teal) 30%, transparent);
+      border-radius: 20px; color: var(--teal); cursor: pointer;
+      transition: background .12s;
+    }
+    .canonical-badge:hover { background: color-mix(in srgb, var(--teal) 22%, transparent); }
+    .canonical-edit-wrap { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
+    .canonical-input {
+      font-family: var(--mono); font-size: 10px; padding: 2px 6px;
+      background: var(--surface2); border: 1px solid var(--accent);
+      border-radius: 3px; color: var(--text); outline: none; width: 130px;
+    }
+    .canonical-save-btn {
+      font-family: var(--mono); font-size: 9px; padding: 2px 7px;
+      background: var(--accent); color: #000; border: none; border-radius: 3px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .canonical-cancel-btn {
+      font-family: var(--mono); font-size: 9px; padding: 2px 7px;
+      background: transparent; color: var(--text-muted); border: 1px solid var(--border2);
+      border-radius: 3px; cursor: pointer;
+    }
+    .view-toggle {
+      display: inline-flex; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 3px; overflow: hidden; margin-left: 8px;
+    }
+    .view-toggle-btn {
+      padding: 3px 10px; font-family: var(--mono); font-size: 9px; letter-spacing: .04em;
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      transition: background .12s, color .12s;
+    }
+    .view-toggle-btn.active { background: var(--teal); color: #000; }
     .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: var(--surface2); }
@@ -307,9 +342,19 @@ let sortDir = 1;
 const SORT_KEY = { date:'date', store:'store', name:'name', qty:'quantity', unit:'unit_price', total:'total_price' };
 
 // ── Sort state for top-items table ────────────────────────────────────────────
-let topItemsData = [];
+let topItemsData    = [];
+let byCanonicalData = [];
+let tiView    = 'name';
 let tiSortCol = 'count';
 let tiSortDir = -1;
+
+function setTiView(v) {
+  tiView = v;
+  tiSortCol = 'count'; tiSortDir = -1;
+  document.getElementById('ti-view-name').classList.toggle('active', v === 'name');
+  document.getElementById('ti-view-ingredient').classList.toggle('active', v === 'ingredient');
+  renderTopItems();
+}
 
 function sortTopItems(col) {
   if (tiSortCol === col) { tiSortDir *= -1; } else { tiSortCol = col; tiSortDir = -1; }
@@ -319,9 +364,11 @@ function sortTopItems(col) {
 function renderTopItems() {
   const el = document.getElementById('top-items-section');
   if (!el) return;
-  if (!topItemsData.length) { el.innerHTML = '<div class="empty" style="padding:24px">No data yet — scan some receipts first.</div>'; return; }
 
-  const data = [...topItemsData].sort((a, b) => {
+  const raw  = tiView === 'ingredient' ? byCanonicalData : topItemsData;
+  if (!raw.length) { el.innerHTML = '<div class="empty" style="padding:24px">No data yet — scan some receipts first.</div>'; return; }
+
+  const data = [...raw].sort((a, b) => {
     const av = a[tiSortCol], bv = b[tiSortCol];
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
@@ -335,30 +382,79 @@ function renderTopItems() {
     return `<th style="cursor:pointer;user-select:none;${align?'text-align:'+align:''}" onclick="sortTopItems('${col}')">${label}${arrow}</th>`;
   };
 
+  const byName = tiView === 'name';
+
   el.innerHTML = `<div class="surface-box"><table class="data-table">
     <thead><tr>
-      ${th('name','Item')}
+      ${th('name', byName ? 'Item' : 'Ingredient')}
+      ${byName ? th('canonical','Ingredient')  : ''}
       ${th('count','Times Bought','right')}
       ${th('total_qty','Total Qty','right')}
       ${th('avg_price','Avg Price','right')}
       ${th('total','Total Spend','right')}
     </tr></thead>
     <tbody>${data.map(item => `
-      <tr style="cursor:pointer;" onclick="drillItem('${esc(item.name)}')" title="Search for ${esc(item.name)}">
-        <td>
+      <tr>
+        <td onclick="drillItem('${esc(item.name)}')" style="cursor:pointer;">
           <span onmouseenter="this.style.color='var(--accent)'" onmouseleave="this.style.color=''">${esc(item.name)}</span>
           <div style="margin-top:4px">
             <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden">
-              <div style="height:100%;width:${pct(item.count, maxItem)}%;background:var(--accent);border-radius:2px"></div>
+              <div style="height:100%;width:${pct(item.count, maxItem)}%;background:var(--teal);border-radius:2px"></div>
             </div>
           </div>
         </td>
+        ${byName ? `<td id="canedit-${esc(item.name)}">${renderCanonicalCell(item)}</td>` : ''}
         <td class="mono-val" style="text-align:right">${item.count}×</td>
         <td class="mono-val" style="text-align:right">${item.total_qty != null ? fmtQty(item.total_qty) : '—'}</td>
         <td class="mono-val" style="text-align:right">${item.avg_price ? 'R ' + fmt(item.avg_price) : '—'}</td>
         <td class="mono-val" style="text-align:right">${item.total ? 'R ' + fmt(item.total) : '—'}</td>
       </tr>`).join('')}
     </tbody></table></div>`;
+}
+
+function renderCanonicalCell(item) {
+  const c = item.canonical || '';
+  return `<span class="canonical-badge" onclick="event.stopPropagation();editCanonical('${esc(item.name)}','${esc(c)}')" title="Click to correct">
+    ${esc(c) || '<em style=&quot;opacity:.5&quot;>—</em>'} ✎
+  </span>`;
+}
+
+function editCanonical(rawName, current) {
+  const cellId = 'canedit-' + rawName;
+  const cell = document.getElementById(cellId);
+  if (!cell) return;
+  cell.innerHTML = `
+    <div class="canonical-edit-wrap">
+      <input class="canonical-input" id="ci-${esc(rawName)}" value="${esc(current)}" placeholder="ingredient name">
+      <button class="canonical-save-btn" onclick="saveCanonical('${esc(rawName)}')">Save</button>
+      <button class="canonical-cancel-btn" onclick="renderTopItems()">✕</button>
+    </div>`;
+  const inp = document.getElementById('ci-' + rawName);
+  inp.focus(); inp.select();
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveCanonical(rawName);
+    if (e.key === 'Escape') renderTopItems();
+  });
+}
+
+async function saveCanonical(rawName) {
+  const inp = document.getElementById('ci-' + rawName);
+  if (!inp) return;
+  const canonical = inp.value.trim();
+  if (!canonical) return;
+  try {
+    const r = await fetch('/analytics/corrections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw_name: rawName, canonical }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Save failed');
+    // Update local data so re-render shows the new value without a full reload
+    topItemsData = topItemsData.map(i => i.name === rawName ? { ...i, canonical } : i);
+    renderTopItems();
+  } catch (e) {
+    alert('Could not save: ' + e.message);
+  }
 }
 
 function sortHistory(col) {
@@ -477,7 +573,7 @@ async function run() {
   const parts = [q ? `"${q}"` : '', ct, st, (fd||td) ? `${fd||'…'}→${td||'now'}` : ''].filter(Boolean);
   if (parts.length) label = parts.join(' · ').toUpperCase();
   ge('mode-indicator').textContent = label;
-  sortCol = null; sortDir = 1; historyData = []; topItemsData = [];
+  sortCol = null; sortDir = 1; historyData = []; topItemsData = []; byCanonicalData = [];
 
   updateChips();
   ge('main-content').innerHTML = '<div class="empty loading">Loading…</div>';
@@ -612,15 +708,27 @@ function renderSummary(d) {
       </div>
 
       <div class="section">
-        <div class="section-head">Most Purchased Items <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click column to sort · click row to search ↓</span></div>
+        <div class="section-head">
+          Most Purchased Items
+          <div class="view-toggle" style="margin-left:8px">
+            <button class="view-toggle-btn active" id="ti-view-name"    onclick="setTiView('name')">BY NAME</button>
+            <button class="view-toggle-btn"        id="ti-view-ingredient" onclick="setTiView('ingredient')">BY INGREDIENT</button>
+          </div>
+          <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click column to sort</span>
+        </div>
         <div id="top-items-section"></div>
       </div>
 
     </div>`;
 
-  topItemsData = d.top_items;
-  tiSortCol = 'count'; tiSortDir = -1;
+  topItemsData    = d.top_items;
+  byCanonicalData = d.by_canonical || [];
+  tiView = 'name'; tiSortCol = 'count'; tiSortDir = -1;
   ge('main-content').innerHTML = html;
+  // Sync toggle button state after DOM is replaced
+  const btnName = document.getElementById('ti-view-name');
+  const btnIngr = document.getElementById('ti-view-ingredient');
+  if (btnName) { btnName.classList.add('active'); btnIngr.classList.remove('active'); }
   renderTopItems();
 }
 

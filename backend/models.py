@@ -251,3 +251,14 @@ class RecipeIngredient(Base):
     notes           = Column(String, nullable=True)
 
     recipe = relationship("Recipe", back_populates="ingredients")
+
+
+# ── Normalization corrections ──────────────────────────────────────────────────
+
+class NormalizationCorrection(Base):
+    __tablename__ = "normalization_corrections"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    raw_name      = Column(String, nullable=False, unique=True, index=True)
+    canonical     = Column(String, nullable=False)
+    corrected_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
