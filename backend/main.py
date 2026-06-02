@@ -2086,6 +2086,7 @@ def analytics_summary(
     top_items = item_q.with_entities(
         models.ReceiptItem.name,
         func.count().label("count"),
+        func.sum(models.ReceiptItem.quantity).label("total_qty"),
         func.sum(models.ReceiptItem.total_price).label("total"),
         func.avg(models.ReceiptItem.unit_price).label("avg_price"),
     ).group_by(models.ReceiptItem.name).order_by(desc(func.count())).limit(25).all()
@@ -2104,7 +2105,7 @@ def analytics_summary(
             for r in by_store
         ],
         "top_items": [
-            {"name": r.name, "count": r.count, "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
+            {"name": r.name, "count": r.count, "total_qty": round(float(r.total_qty or 0), 2), "total": round(float(r.total or 0), 2), "avg_price": round(float(r.avg_price or 0), 2)}
             for r in top_items
         ],
     }

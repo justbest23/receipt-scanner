@@ -306,6 +306,61 @@ let sortCol = null;
 let sortDir = 1;
 const SORT_KEY = { date:'date', store:'store', name:'name', qty:'quantity', unit:'unit_price', total:'total_price' };
 
+// ── Sort state for top-items table ────────────────────────────────────────────
+let topItemsData = [];
+let tiSortCol = 'count';
+let tiSortDir = -1;
+
+function sortTopItems(col) {
+  if (tiSortCol === col) { tiSortDir *= -1; } else { tiSortCol = col; tiSortDir = -1; }
+  renderTopItems();
+}
+
+function renderTopItems() {
+  const el = document.getElementById('top-items-section');
+  if (!el) return;
+  if (!topItemsData.length) { el.innerHTML = '<div class="empty" style="padding:24px">No data yet — scan some receipts first.</div>'; return; }
+
+  const data = [...topItemsData].sort((a, b) => {
+    const av = a[tiSortCol], bv = b[tiSortCol];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return av < bv ? -tiSortDir : av > bv ? tiSortDir : 0;
+  });
+
+  const maxItem = Math.max(...data.map(x => x.count), 1);
+  const th = (col, label, align) => {
+    const arrow = tiSortCol === col ? (tiSortDir === -1 ? ' ▼' : ' ▲') : '';
+    return `<th style="cursor:pointer;user-select:none;${align?'text-align:'+align:''}" onclick="sortTopItems('${col}')">${label}${arrow}</th>`;
+  };
+
+  el.innerHTML = `<div class="surface-box"><table class="data-table">
+    <thead><tr>
+      ${th('name','Item')}
+      ${th('count','Times Bought','right')}
+      ${th('total_qty','Total Qty','right')}
+      ${th('avg_price','Avg Price','right')}
+      ${th('total','Total Spend','right')}
+    </tr></thead>
+    <tbody>${data.map(item => `
+      <tr style="cursor:pointer;" onclick="drillItem('${esc(item.name)}')" title="Search for ${esc(item.name)}">
+        <td>
+          <span onmouseenter="this.style.color='var(--accent)'" onmouseleave="this.style.color=''">${esc(item.name)}</span>
+          <div style="margin-top:4px">
+            <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${pct(item.count, maxItem)}%;background:var(--accent);border-radius:2px"></div>
+            </div>
+          </div>
+        </td>
+        <td class="mono-val" style="text-align:right">${item.count}×</td>
+        <td class="mono-val" style="text-align:right">${item.total_qty != null ? fmtQty(item.total_qty) : '—'}</td>
+        <td class="mono-val" style="text-align:right">${item.avg_price ? 'R ' + fmt(item.avg_price) : '—'}</td>
+        <td class="mono-val" style="text-align:right">${item.total ? 'R ' + fmt(item.total) : '—'}</td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
 function sortHistory(col) {
   if (sortCol === col) { sortDir *= -1; } else { sortCol = col; sortDir = 1; }
   renderHistory();
@@ -422,7 +477,7 @@ async function run() {
   const parts = [q ? `"${q}"` : '', ct, st, (fd||td) ? `${fd||'…'}→${td||'now'}` : ''].filter(Boolean);
   if (parts.length) label = parts.join(' · ').toUpperCase();
   ge('mode-indicator').textContent = label;
-  sortCol = null; sortDir = 1; historyData = [];
+  sortCol = null; sortDir = 1; historyData = []; topItemsData = [];
 
   updateChips();
   ge('main-content').innerHTML = '<div class="empty loading">Loading…</div>';
@@ -557,39 +612,21 @@ function renderSummary(d) {
       </div>
 
       <div class="section">
-        <div class="section-head">Most Purchased Items <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click to search ↓</span></div>
-        ${d.top_items.length === 0 ? '<div class="empty" style="padding:24px">No data yet — scan some receipts first.</div>' : `
-        <div class="surface-box">
-          <table class="data-table">
-            <thead><tr>
-              <th>Item</th><th>Times bought</th><th>Avg Price</th><th>Total Spend</th>
-            </tr></thead>
-            <tbody>${d.top_items.map(item => `
-              <tr style="cursor:pointer;" onclick="drillItem('${esc(item.name)}')" title="Search for ${esc(item.name)}">
-                <td>
-                  <span onmouseenter="this.style.color='var(--accent)'" onmouseleave="this.style.color=''">${esc(item.name)}</span>
-                  <div style="margin-top:4px">
-                    <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden">
-                      <div style="height:100%;width:${pct(item.count, maxItem)}%;background:var(--accent);border-radius:2px"></div>
-                    </div>
-                  </div>
-                </td>
-                <td class="mono-val">${item.count}×</td>
-                <td class="mono-val">${item.avg_price ? 'R ' + fmt(item.avg_price) : '—'}</td>
-                <td class="mono-val">${item.total ? 'R ' + fmt(item.total) : '—'}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`}
+        <div class="section-head">Most Purchased Items <span style="color:var(--text-muted);font-size:9px;margin-left:6px">click column to sort · click row to search ↓</span></div>
+        <div id="top-items-section"></div>
       </div>
 
     </div>`;
 
+  topItemsData = d.top_items;
+  tiSortCol = 'count'; tiSortDir = -1;
   ge('main-content').innerHTML = html;
+  renderTopItems();
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function fmt(v)    { return v == null ? '—' : Number(v).toFixed(2); }
+function fmtQty(v) { const n = Number(v); return Number.isInteger(n) ? String(n) : n.toFixed(2); }
 function pct(v, m) { return Math.round(Math.min(100, (v / m) * 100)); }
 function esc(s)    { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
