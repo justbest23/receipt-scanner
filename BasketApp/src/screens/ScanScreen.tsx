@@ -55,9 +55,13 @@ export default function ScanScreen() {
     setImageUri(asset.uri!);
     setStage('scanning');
     setError('');
+    console.log('[Scan] uri:', asset.uri, 'type:', asset.type, 'name:', asset.fileName);
     try {
       const data = await api.scan(asset.uri!, asset.type ?? 'image/jpeg', asset.fileName ?? 'receipt.jpg', useClaude);
       const ext = data.extracted || {};
+      if (data.llm_error) {
+        Alert.alert('Extraction Warning', `Claude returned an error: ${data.llm_error}\n\nYou can still fill in the details manually.`);
+      }
       setStore(ext.store?.name || '');
       setDate(ext.date?.value || '');
       setTotal(ext.total != null ? String(ext.total) : '');
@@ -65,6 +69,7 @@ export default function ScanScreen() {
       setItems(resultToItems(ext.items));
       setStage('review');
     } catch (e: any) {
+      Alert.alert('Scan Failed', e.message || 'Could not scan receipt. Please check your connection and try again.');
       setError(e.message || 'Scan failed');
       setStage('idle');
     }

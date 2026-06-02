@@ -276,6 +276,8 @@ def register(request: Request, payload: dict, db: Session = Depends(database.get
 
     if not username or not email or not password:
         raise HTTPException(400, "username, email, and password are required")
+    if display_name and len(display_name) > 64:
+        raise HTTPException(400, "Display name must be 64 characters or fewer")
     if not re.match(r"^[a-z0-9_\-]{3,32}$", username):
         raise HTTPException(400, "Username must be 3–32 characters: letters, numbers, _ or -")
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
@@ -569,7 +571,10 @@ def update_profile(
     from sqlalchemy import func as sqlfunc
 
     if "display_name" in payload:
-        user.display_name = (payload["display_name"] or "").strip() or None
+        dn = (payload["display_name"] or "").strip() or None
+        if dn and len(dn) > 64:
+            raise HTTPException(400, "Display name must be 64 characters or fewer")
+        user.display_name = dn
 
     if "username" in payload:
         new_un = (payload["username"] or "").strip().lower()
@@ -645,9 +650,12 @@ def admin_create_user(
         raise HTTPException(409, f"Username '{username}' already exists")
 
     perms = [p for p in (payload.get("permissions") or []) if p in ALL_PERMISSIONS]
+    admin_dn = (payload.get("display_name") or "").strip() or None
+    if admin_dn and len(admin_dn) > 64:
+        raise HTTPException(400, "Display name must be 64 characters or fewer")
     user = models.User(
         username      = username,
-        display_name  = (payload.get("display_name") or "").strip() or None,
+        display_name  = admin_dn,
         password_hash = auth.hash_password(password),
         is_admin      = bool(payload.get("is_admin", False)),
         is_active     = True,
@@ -684,7 +692,10 @@ def admin_update_user(
         raise HTTPException(404, "User not found")
 
     if "display_name" in payload:
-        u.display_name = (payload["display_name"] or "").strip() or None
+        adn = (payload["display_name"] or "").strip() or None
+        if adn and len(adn) > 64:
+            raise HTTPException(400, "Display name must be 64 characters or fewer")
+        u.display_name = adn
     if "is_admin" in payload:
         if u.id == admin.id and not payload["is_admin"]:
             raise HTTPException(400, "Cannot remove your own admin rights")

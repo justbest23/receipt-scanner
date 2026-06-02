@@ -49,7 +49,7 @@ export default function ProfileScreen() {
       <Text style={s.title}>Profile</Text>
 
       <View style={s.card}>
-        <Field label="Display Name" value={displayName} onChange={setDisplayName} />
+        <Field label="Display Name" value={displayName} onChange={setDisplayName} maxLength={64} />
         <Field label="Username" value={username} onChange={setUsername} autoCapitalize="none" />
         <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" />
 
@@ -112,7 +112,7 @@ export default function ProfileScreen() {
   );
 }
 
-function Field({ label, value, onChange, secure, placeholder, autoCapitalize, keyboardType }: any) {
+function Field({ label, value, onChange, secure, placeholder, autoCapitalize, keyboardType, maxLength }: any) {
   return (
     <View style={s.field}>
       <Text style={s.fieldLabel}>{label}</Text>
@@ -126,6 +126,7 @@ function Field({ label, value, onChange, secure, placeholder, autoCapitalize, ke
         autoCapitalize={autoCapitalize ?? 'words'}
         keyboardType={keyboardType}
         autoCorrect={false}
+        maxLength={maxLength}
       />
     </View>
   );
