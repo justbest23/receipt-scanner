@@ -37,6 +37,8 @@ def _migrate():
         ("users",         "email",         "VARCHAR"),
         ("users",         "email_verified","BOOLEAN DEFAULT FALSE"),
         ("users",         "currency",      "VARCHAR DEFAULT 'ZAR'"),
+        ("users",         "language",      "VARCHAR DEFAULT 'en'"),
+        ("receipts",      "language",      "VARCHAR DEFAULT 'en'"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in new_columns:
@@ -99,7 +101,7 @@ def get_db():
         db.close()
 
 
-def save_receipt(db, payload: dict, image_path: str | None = None, user_id: int | None = None) -> int:
+def save_receipt(db, payload: dict, image_path: str | None = None, user_id: int | None = None, language: str = "en") -> int:
     """
     Persist a confirmed receipt payload to the database.
     payload is the user-reviewed 'extracted' dict plus image_path and vendor.
@@ -143,6 +145,7 @@ def save_receipt(db, payload: dict, image_path: str | None = None, user_id: int 
         vat_total    = ext.get("vat_total"),
         total        = ext.get("total"),
         currency     = ext.get("currency", "ZAR"),
+        language     = payload.get("language", language) or "en",
         tax_groups   = ext.get("tax_groups"),
     )
     db.add(receipt)

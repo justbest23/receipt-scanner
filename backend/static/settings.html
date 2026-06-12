@@ -162,6 +162,14 @@
           </select>
         </div>
       </div>
+      <div class="field-row">
+        <div class="field"><label>Language <span style="opacity:.5;font-size:10px">receipt scanning &amp; UI</span></label>
+          <select id="f-language">
+            <option value="en">🇬🇧 English</option>
+            <option value="sv">🇸🇪 Svenska (Swedish)</option>
+          </select>
+        </div>
+      </div>
       <div class="divider">Change Password</div>
       <div class="field-row">
         <div class="field"><label>New Password <span style="opacity:.5">(leave blank to keep)</span></label><input type="password" id="f-pw1" autocomplete="new-password" placeholder="min 8 characters"></div>
@@ -198,6 +206,8 @@ async function loadAccount() {
     ge('f-username').value = u.username || '';
     ge('f-email').value    = u.email || '';
     ge('f-currency').value = u.currency || 'ZAR';
+    ge('f-language').value = u.language || 'en';
+    initLang(u.language || 'en');
   } catch(e) { console.error('Failed to load account', e); }
 }
 
@@ -216,6 +226,7 @@ async function saveAccount() {
     username:     ge('f-username').value.trim(),
     email:        ge('f-email').value.trim(),
     currency:     ge('f-currency').value,
+    language:     ge('f-language').value,
   };
   if (pw1) body.password = pw1;
 
@@ -338,6 +349,7 @@ loadAccount();
 loadCorrections();
 scrollToHash();
 </script>
+<script src="/static/translations.js"></script>
 <script src="/static/auth.js"></script>
 <script>
   function setTheme(t) {

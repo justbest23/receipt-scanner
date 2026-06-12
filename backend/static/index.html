@@ -371,7 +371,14 @@
         <button id="remove-btn">✕</button>
       </div>
       <div id="status-bar"></div>
-      <button id="scan-btn" disabled style="margin-top:14px">▶ Run Pipeline</button>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px">
+        <label for="lang-select" style="color:var(--text-muted)">Receipt language:</label>
+        <select id="lang-select" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);padding:3px 6px;font-size:11px;font-family:var(--mono)">
+          <option value="en">🇬🇧 English</option>
+          <option value="sv">🇸🇪 Svenska</option>
+        </select>
+      </div>
+      <button id="scan-btn" disabled style="margin-top:10px">▶ Run Pipeline</button>
       <button id="claude-btn" disabled>✦ Try Claude</button>
       <button id="minicpm-btn" disabled>⬡ Try MiniCPM</button>
       <button id="history-toggle">⟳ History</button>
@@ -480,9 +487,12 @@ async function runScan(endpoint, model = null) {
   setStage('extract', 'run',  `Extracting data${tag}…`);
   setStage('review',  'pend', 'Waiting for review…');
 
-  const fd  = new FormData();
+  const fd   = new FormData();
   fd.append('file', selectedFile);
-  const url = model ? `${endpoint}?model=${encodeURIComponent(model)}` : endpoint;
+  const lang = ge('lang-select')?.value || 'en';
+  const qs   = new URLSearchParams({ language: lang });
+  if (model) qs.set('model', model);
+  const url  = `${endpoint}?${qs}`;
 
   try {
     const r    = await fetch(url, { method: 'POST', body: fd });
@@ -732,6 +742,7 @@ async function confirmSave() {
   const payload = {
     image_path: pendingResult.image_path,
     vendor:     pendingResult.vendor,
+    language:   pendingResult.language || ge('lang-select')?.value || 'en',
     extracted: {
       ...ext,
       store:     { name: storeName, confidence: ext.store?.confidence },
@@ -834,6 +845,7 @@ function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function fmt(v,cur) { if(v==null)return'—'; return(cur==='ZAR'?'R':(cur||''))+Number(v).toFixed(2); }
 function totRow(lbl,val,grand=false) { return `<div class="tot-row${grand?' grand':''}" ><span class="tot-label">${lbl}</span><span>${val}</span></div>`; }
 </script>
+<script src="/static/translations.js"></script>
 <script src="/static/auth.js"></script>
 <script>
   function setTheme(t) {
@@ -848,6 +860,14 @@ function totRow(lbl,val,grand=false) { return `<div class="tot-row${grand?' gran
     document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
   })();
   loadCategories();
+  // Pre-fill language from user profile
+  fetch('/auth/me').then(r => r.ok ? r.json() : null).then(u => {
+    if (u?.language) {
+      const sel = document.getElementById('lang-select');
+      if (sel) sel.value = u.language;
+      initLang(u.language);
+    }
+  }).catch(() => {});
 </script>
 </body>
 </html>

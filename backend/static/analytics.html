@@ -742,8 +742,10 @@ loadStores();
 loadCategories();
 run();
 </script>
+<script src="/static/translations.js"></script>
 <script src="/static/auth.js"></script>
 <script>
+  fetch('/auth/me').then(r => r.ok ? r.json() : null).then(u => { if (u?.language) initLang(u.language); }).catch(()=>{});
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('basket-theme', t);

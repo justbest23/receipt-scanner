@@ -606,6 +606,11 @@ def update_profile(
         if cur:
             user.currency = cur
 
+    if "language" in payload:
+        lang = (payload["language"] or "").strip().lower()
+        if lang:
+            user.language = lang
+
     db.commit()
     db.refresh(user)
     logger.info(f"User '{user.username}' updated their profile")
@@ -622,6 +627,7 @@ def auth_me(user: models.User = Depends(auth.get_current_user)):
         "is_admin":     user.is_admin,
         "permissions":  user.permissions or [],
         "currency":     user.currency or "ZAR",
+        "language":     user.language or "en",
     }
 
 
@@ -740,6 +746,7 @@ def admin_delete_user(
 def scan_receipt(
     file: UploadFile = File(...),
     model: str | None = Query(None),
+    language: str = Query("en"),
     user: models.User = Depends(auth.require_permission("scan")),
 ):
     if file.content_type not in ALLOWED_TYPES:
@@ -760,7 +767,8 @@ def scan_receipt(
     logger.info(f"Processing {image_path.name} ({len(content)/1024:.1f} KB)" + (f" [{model}]" if model else ""))
 
     try:
-        result = run_pipeline(str(image_path), model=model)
+        result = run_pipeline(str(image_path), model=model, language=language)
+        result["language"] = language
     except Exception as e:
         logger.error(f"Pipeline error: {e}", exc_info=True)
         raise HTTPException(500, f"Pipeline failed: {e}")
@@ -771,6 +779,7 @@ def scan_receipt(
 @app.post("/scan/claude")
 def scan_receipt_claude(
     file: UploadFile = File(...),
+    language: str = Query("en"),
     user: models.User = Depends(auth.require_permission("scan")),
 ):
     if file.content_type not in ALLOWED_TYPES:
@@ -791,7 +800,8 @@ def scan_receipt_claude(
     logger.info(f"Claude scan: {image_path.name} ({len(content)/1024:.1f} KB)")
 
     try:
-        result = run_claude_pipeline(str(image_path))
+        result = run_claude_pipeline(str(image_path), language=language)
+        result["language"] = language
     except Exception as e:
         logger.error(f"Claude pipeline error: {e}", exc_info=True)
         raise HTTPException(500, f"Claude pipeline failed: {e}")
@@ -864,7 +874,7 @@ def confirm_receipt(
     payload should be the full pipeline result dict (or just the extracted portion).
     """
     try:
-        receipt_id = database.save_receipt(db, payload, user_id=user.id)
+        receipt_id = database.save_receipt(db, payload, user_id=user.id, language=payload.get("language", "en"))
         logger.info(f"Confirmed and saved receipt #{receipt_id} for user #{user.id}")
         # Normalize item names in the background (non-blocking)
         import threading
@@ -2663,6 +2673,8 @@ def _user_dict(u: models.User) -> dict:
         "is_admin":       u.is_admin,
         "is_active":      u.is_active,
         "permissions":    u.permissions or [],
+        "currency":       u.currency or "ZAR",
+        "language":       u.language or "en",
         "created_at":     u.created_at.isoformat() if u.created_at else None,
     }
 

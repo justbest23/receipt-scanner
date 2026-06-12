@@ -11,7 +11,7 @@ import logging
 import os
 
 from vendor import get_profile, build_vendor_prompt_section
-from pipeline import _BASE_PROMPT
+from pipeline import _BASE_PROMPT, _language_note
 
 try:
     import anthropic as _anthropic
@@ -29,7 +29,7 @@ _MEDIA_TYPES = {
 }
 
 
-def run_claude_pipeline(image_path: str) -> dict:
+def run_claude_pipeline(image_path: str, language: str = "en") -> dict:
     if not _AVAILABLE:
         return _err(image_path, "anthropic package not installed — rebuild the Docker image")
 
@@ -54,8 +54,9 @@ def run_claude_pipeline(image_path: str) -> dict:
     logger.info(f"Matched profile: {vendor_profile.get('name', 'Unknown')}")
 
     # Stage 2: full extraction
-    vendor_section = build_vendor_prompt_section(vendor_profile)
-    prompt         = _BASE_PROMPT.format(vendor_section=vendor_section)
+    vendor_section   = build_vendor_prompt_section(vendor_profile)
+    language_section = _language_note(language)
+    prompt           = _BASE_PROMPT.format(vendor_section=vendor_section, language_section=language_section)
 
     logger.info("Claude Stage 2: extraction")
     extracted, llm_error = _extract(client, image_b64, media_type, prompt)

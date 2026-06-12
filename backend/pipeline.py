@@ -24,11 +24,33 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2-vision:11b")
 # ── Base extraction prompt ────────────────────────────────────────────────────
 # Vendor-specific rules are injected at {vendor_section}
 
+_LANGUAGE_HINTS: dict[str, str] = {
+    "sv": (
+        "LANGUAGE & COUNTRY: This receipt is in Swedish (Sverige/Sweden).\n"
+        "- receipt_name: copy exact text as printed (may be Swedish)\n"
+        "- display_name: translate to English (e.g. Mjölk→Milk, Ägg→Eggs, Bröd→Bread, Smör→Butter, Kyckling→Chicken)\n"
+        "- Currency is SEK (Swedish Krona) unless stated otherwise\n"
+        "SWEDISH VAT (moms) RULES — override the South African VAT rules below:\n"
+        "  25% standard rate (livsmedel excluded)\n"
+        "  12% on food/groceries (livsmedel), restaurant meals, takeaway, hotel accommodation\n"
+        "   6% on newspapers, books, public transport, cultural events\n"
+        "   0% on prescription medicine, financial services\n"
+        "  Set vat_applicable=true for all food items (12% moms applies in Sweden, not zero-rated).\n"
+        "  Use country clues on the receipt (Swedish address, website .se, org.nr, phone +46) to confirm.\n"
+    ),
+}
+
+
+def _language_note(language: str) -> str:
+    hint = _LANGUAGE_HINTS.get((language or "en").lower().split("-")[0], "")
+    return hint + "\n" if hint else ""
+
+
 _BASE_PROMPT = """You are a receipt parser. Read this receipt image carefully and extract all data.
 
 Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
 
-{vendor_section}
+{language_section}{vendor_section}
 
 JSON STRUCTURE:
 {{
@@ -76,12 +98,14 @@ GENERAL RULES (apply when no vendor-specific rule overrides):
 - quantity is 1 unless an explicit multiplier appears on the receipt (e.g. "2 @", "2 x", "Qty: 3")
 - per_kg_price = total_price / weight_kg when weight_kg is known, else null
 - Negative price lines are discounts — include them with negative total_price, category=discount
-- If a RATE/TAX/GROSS/NET table appears at the bottom, extract it into tax_groups and use the TAX
-  value from the 15% row as vat_total
+- If a RATE/TAX/GROSS/NET table appears at the bottom, extract it into tax_groups
 - confidence >0.85 = high, 0.70-0.85 = moderate, <0.70 = low
 - Set flag when a value looks wrong or ambiguous
+- Use any country clues on the receipt (address, phone country code, domain extension, org/VAT number
+  format) to determine the correct VAT/tax rules. The LANGUAGE SECTION above takes priority over
+  the South African rules below when country clues confirm a different country.
 
-SOUTH AFRICAN VAT ZERO-RATING (fallback when no vendor VAT indicator is available):
+SOUTH AFRICAN VAT ZERO-RATING (fallback — use ONLY if no language/country section above applies):
 Zero-rated: fresh/frozen/dried fruit and veg, bread and bread flour, eggs, plain milk and maas,
 cooking oil, rice, samp, maize meal, oats, dried beans/lentils, tinned pilchards/sardines,
 peanut butter.
@@ -90,7 +114,7 @@ Everything else: 15% VAT."""
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def run_pipeline(image_path: str, model: str | None = None) -> dict:
+def run_pipeline(image_path: str, model: str | None = None, language: str = "en") -> dict:
     """
     Full two-stage pipeline.
     Returns dict with: extracted, vendor, model_used, llm_error, status, image_path
@@ -109,8 +133,9 @@ def run_pipeline(image_path: str, model: str | None = None) -> dict:
 
     # Stage 2: extraction with vendor-specific prompt
     logger.info(f"Stage 2: extraction with {vendor_name} profile")
-    vendor_section = build_vendor_prompt_section(vendor_profile)
-    prompt         = _BASE_PROMPT.format(vendor_section=vendor_section)
+    vendor_section   = build_vendor_prompt_section(vendor_profile)
+    language_section = _language_note(language)
+    prompt           = _BASE_PROMPT.format(vendor_section=vendor_section, language_section=language_section)
 
     extracted, llm_error = _extract(image_b64, prompt, use_model)
 
